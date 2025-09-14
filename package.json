@@ -14,7 +14,11 @@
 		"dev:server": "turbo -F @aether-ai-2/backend dev",
 		"dev:setup": "turbo -F @aether-ai-2/backend dev:setup"
 	},
-	"dependencies": {},
+	"dependencies": {
+		"@types/nodemailer": "^7.0.1",
+		"next-auth": "^4.24.11",
+		"nodemailer": "^7.0.6"
+	},
 	"devDependencies": {
 		"turbo": "^2.5.4"
 	},
