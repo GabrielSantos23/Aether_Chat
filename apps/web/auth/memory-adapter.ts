@@ -1,7 +1,5 @@
 import type { Adapter } from "@auth/core/adapters";
 
-// Simple in-memory adapter for NextAuth v5
-// This is a minimal implementation for JWT strategy with email login
 export function MemoryAdapter(): Adapter {
   const users: any[] = [];
   const accounts: any[] = [];
@@ -11,7 +9,7 @@ export function MemoryAdapter(): Adapter {
   return {
     async createUser(user) {
       const newUser = {
-        id: Math.random().toString(36).substr(2, 9),
+        id: Math.random().toString(36).substring(2, 9),
         ...user,
         emailVerified: user.emailVerified ? new Date(user.emailVerified) : null,
       };

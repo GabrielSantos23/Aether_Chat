@@ -6,7 +6,7 @@ import { Separator } from "@/components/ui/separator";
 import { useSession, signOut } from "next-auth/react";
 import { Link } from "react-router-dom";
 import { toast } from "sonner";
-import { Globe, MapPin, Clock } from "lucide-react"; // Add these imports
+import { Globe, MapPin, Clock } from "lucide-react";
 import { UserProfileCards } from "@/components/UserProfileCards";
 import { useMutation, useQuery } from "convex/react";
 import { api } from "@aether-ai-2/backend/convex/_generated/api";
@@ -73,9 +73,6 @@ export default function AccountDashboard() {
   const sessions = useQuery(api.users.getMySessions) ?? [];
   const revokeSession = useMutation(api.users.revokeSession);
   const updateMyName = useMutation(api.users.updateMyName);
-
-  // Debug: Log sessions data
-  console.log("Sessions data:", sessions);
 
   const handleUsernameUpdate = async (value: string) => {
     if (!session?.user) return;
@@ -150,7 +147,7 @@ export default function AccountDashboard() {
               </div>
             ) : (
               sessions.map((sessionItem: any) => {
-                const isCurrentSession = false; // Unknown reliably from client; hide current marker
+                const isCurrentSession = false;
                 const deviceInfo = getDeviceInfo(sessionItem);
                 const deviceIcon = getDeviceIcon(sessionItem);
 

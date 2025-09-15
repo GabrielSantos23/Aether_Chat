@@ -63,7 +63,6 @@ function AppRoutes() {
           <Route path="/test-resend" element={<TestResendPage />} />
         </Route>
 
-        {/* Account Routes with nested structure */}
         <Route path="/account" element={<AccountLayout />}>
           <Route index element={<AccountDashboard />} />
           <Route path="index" element={<AccountIndex />} />
@@ -73,7 +72,6 @@ function AppRoutes() {
           <Route path="subscription" element={<AccountSubscription />} />
         </Route>
 
-        {/* Keep your original settings route if needed separately */}
         <Route path="/settings" element={<SettingsPage />} />
       </Route>
       <Route path="/" element={<Navigate to="/chat" replace />} />

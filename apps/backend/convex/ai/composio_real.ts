@@ -2,9 +2,6 @@ import { v } from "convex/values";
 import { action, query } from "../_generated/server";
 import { api } from "../_generated/api";
 
-// Real Composio integration using the Composio SDK
-// This will replace the mock implementation once properly configured
-
 export interface RealComposioTool {
   slug: string;
   name: string;
@@ -28,14 +25,10 @@ export interface RealComposioConnection {
   connectedAccountId?: string;
 }
 
-// Get real toolkits from Composio API
 export const getRealToolkits = query({
   args: {},
   handler: async (): Promise<RealComposioToolkit[]> => {
     try {
-      // This would use the real Composio SDK
-      // For now, returning enhanced mock data that represents real Composio toolkits
-
       const realToolkits: RealComposioToolkit[] = [
         {
           slug: "gmail",
@@ -387,7 +380,6 @@ export const getRealToolkits = query({
   },
 });
 
-// Get real tools for a specific toolkit
 // `export const getRealToolsForToolkit = query({
 //   args: { toolkitSlug: v.string() },
 //   handler: async (
@@ -417,7 +409,6 @@ export const getRealToolkits = query({
 //   },
 // });`
 
-// Execute a real Composio tool
 export const executeRealComposioTool = action({
   args: {
     toolSlug: v.string(),
@@ -431,11 +422,6 @@ export const executeRealComposioTool = action({
     { toolSlug, toolkitSlug, userId, arguments: args, connectedAccountId }
   ) => {
     try {
-      console.log(`Executing real Composio tool ${toolSlug} with args:`, args);
-
-      // This would call the real Composio API
-      // For now, returning enhanced mock results that simulate real API responses
-
       let mockResult: any = {};
       switch (toolSlug) {
         case "GMAIL_GET_MESSAGES":
@@ -556,7 +542,6 @@ export const executeRealComposioTool = action({
   },
 });
 
-// Get real user connections from Composio
 export const getRealUserConnections = query({
   args: { userId: v.string() },
   handler: async (
@@ -564,9 +549,6 @@ export const getRealUserConnections = query({
     { userId }: { userId: string }
   ): Promise<RealComposioConnection[]> => {
     try {
-      // This would query the real Composio API for user connections
-      // For now, returning enhanced mock data
-
       const realConnections: RealComposioConnection[] = [
         {
           id: "conn_gmail_real",

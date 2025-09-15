@@ -6,8 +6,6 @@ import { MutationCtx, QueryCtx } from "../_generated/server";
 import { getOrCreateUserId } from "./shared";
 import { models } from "../../../../apps/web/src/lib/models";
 
-// MUTATIONS - for database modifications
-
 export const createChat = mutation({
   args: {
     title: v.optional(v.string()),
@@ -81,23 +79,18 @@ export const addMessage = mutation({
       identity.email
     );
 
-    // Verify chat ownership
     const chat = await ctx.db.get(chatId);
     if (!chat) {
       throw new Error("Chat not found");
     }
 
-    // Replace with direct ownership check using userId derived above
     if (chat.userId !== userId) {
       throw new Error("Access denied");
     }
 
-    // --- Pro Model Access Check (Optimized) ---
     if (modelId && role === "assistant") {
-      // Only check for assistant messages (when we're about to generate)
       const modelInfo = models.find((m: any) => m.id === modelId);
       if (modelInfo && modelInfo.isApiKeyOnly) {
-        // First, check if we have user-provided keys
         const userKeys = await ctx.db
           .query("apiKeys")
           .withIndex("by_user_and_service", (q) =>
@@ -113,9 +106,8 @@ export const addMessage = mutation({
                   | "deepgram"
               )
           )
-          .first(); // Use first() instead of collect() for better performance
+          .first();
 
-        // Then check if we have environment variables
         let hasEnvKey = false;
         if (modelInfo.provider === "gemini" && process.env.GEMINI_API_KEY) {
           hasEnvKey = true;
@@ -133,10 +125,8 @@ export const addMessage = mutation({
           hasEnvKey = true;
         }
 
-        // For Gemini models, we also have a hardcoded fallback key
         const hasGeminiFallback = modelInfo.provider === "gemini";
 
-        // Only throw an error if we have no keys available
         if (!userKeys && !hasEnvKey && !hasGeminiFallback) {
           throw new Error(
             `Using ${modelInfo.name} requires you to add a valid ${modelInfo.provider} API key in settings.`
@@ -144,7 +134,6 @@ export const addMessage = mutation({
         }
       }
     }
-    // --- End Check ---
 
     const messageData: any = {
       chatId,
@@ -161,33 +150,29 @@ export const addMessage = mutation({
       messageData.attachments = attachments;
     }
 
-    // --- Title Generation (Optimized) ---
     if (
       role === "user" &&
       chat.title === "New chat" &&
       !chat.isGeneratingTitle
     ) {
-      // Check if this is the first user message (more efficient)
       const existingUserMessage = await ctx.db
         .query("messages")
         .withIndex("by_chat", (q) => q.eq("chatId", chatId))
         .filter((q) => q.eq(q.field("role"), "user"))
         .first();
 
-      // If no existing user messages found, this is the first user message
       if (!existingUserMessage) {
         await ctx.db.patch(chatId, { isGeneratingTitle: true });
         await ctx.scheduler.runAfter(0, api.chat.actions.generateTitle, {
           chatId,
           messageContent: content,
-          modelId: modelId || "gemini-2.0-flash-lite", // Fallback to a default model
+          modelId: modelId || "gemini-2.0-flash-lite",
         });
       }
     }
 
     const messageId = await ctx.db.insert("messages", messageData);
 
-    // Update chat's updatedAt timestamp
     await ctx.db.patch(chatId, {
       updatedAt: Date.now(),
     });
@@ -243,7 +228,6 @@ export const updateMessage = mutation({
       throw new Error("Message not found");
     }
 
-    // Verify chat ownership
     const chat = await ctx.db.get(message.chatId);
     if (!chat || chat.userId !== userId) {
       throw new Error("Access denied");
@@ -303,7 +287,6 @@ export const addAnnotation = mutation({
       toolCalls: [...existingToolCalls, newAnnotationCall],
     });
 
-    // Touch chat updatedAt
     await ctx.db.patch(message.chatId, { updatedAt: Date.now() });
 
     return messageId;
@@ -331,18 +314,15 @@ export const cancelMessage = mutation({
       throw new Error("Message not found");
     }
 
-    // Verify chat ownership
     const chat = await ctx.db.get(message.chatId);
     if (!chat) {
       throw new Error("Chat not found");
     }
 
-    // Replace with direct ownership check using userId derived above
     if (chat.userId !== userId) {
       throw new Error("Access denied");
     }
 
-    // Only allow cancellation of incomplete assistant messages
     if (message.role !== "assistant" || message.isComplete) {
       throw new Error("Cannot cancel this message");
     }
@@ -376,20 +356,17 @@ export const editMessage = mutation({
       throw new Error("Message not found");
     }
 
-    // Verify chat ownership
     const chat = await ctx.db.get(message.chatId);
     if (!chat || chat.userId !== userId) {
       throw new Error("Access denied");
     }
 
-    // Only allow editing user messages
     if (message.role !== "user") {
       throw new Error("Only user messages can be edited");
     }
 
     await ctx.db.patch(messageId, { content });
 
-    // Update chat's updatedAt timestamp
     await ctx.db.patch(message.chatId, {
       updatedAt: Date.now(),
     });
@@ -419,7 +396,6 @@ export const deleteMessage = mutation({
       throw new Error("Message not found");
     }
 
-    // Verify chat ownership
     const chat = await ctx.db.get(message.chatId);
     if (!chat || chat.userId !== userId) {
       throw new Error("Access denied");
@@ -448,26 +424,22 @@ export const deleteMessagesFromIndex = mutation({
       identity.email
     );
 
-    // Verify chat ownership using userId
     const chat = await ctx.db.get(chatId);
     if (!chat || chat.userId !== userId) {
       throw new Error("Chat not found or access denied");
     }
 
-    // Get all messages in the chat
     const messages = await ctx.db
       .query("messages")
       .withIndex("by_chat", (q) => q.eq("chatId", chatId))
       .order("asc")
       .collect();
 
-    // Find the index of the fromMessageId
     const fromIndex = messages.findIndex((msg) => msg._id === fromMessageId);
     if (fromIndex === -1) {
       throw new Error("Message not found in chat");
     }
 
-    // Delete all messages from that index onwards
     const messagesToDelete = messages.slice(fromIndex);
     for (const message of messagesToDelete) {
       await ctx.db.delete(message._id);
@@ -508,7 +480,6 @@ export const deleteChat = mutation({
       throw new Error("Chat not found or access denied");
     }
 
-    // Delete all messages in the chat
     const messages = await ctx.db
       .query("messages")
       .withIndex("by_chat", (q) => q.eq("chatId", chatId))
@@ -518,7 +489,6 @@ export const deleteChat = mutation({
       await ctx.db.delete(message._id);
     }
 
-    // Delete the chat
     await ctx.db.delete(chatId);
 
     return { success: true };
@@ -635,7 +605,6 @@ export const migrateAnonymousChats = mutation({
 
     const migratedChatIds: { [key: string]: Id<"chats"> } = {};
 
-    // Create new chats for the authenticated user
     for (const chat of chats) {
       const newChatId = await ctx.db.insert("chats", {
         userId: userId,
@@ -646,11 +615,9 @@ export const migrateAnonymousChats = mutation({
       migratedChatIds[chat.id] = newChatId;
     }
 
-    // Create new messages and link them to the new chats
     for (const message of messages) {
       const newChatId = migratedChatIds[message.conversationId];
       if (newChatId) {
-        // Only migrate user and assistant messages, as they are the only roles supported in the schema
         if (message.role === "user" || message.role === "assistant") {
           await ctx.db.insert("messages", {
             chatId: newChatId,
@@ -762,7 +729,7 @@ export const branchChat = mutation({
     );
 
     const now = Date.now();
-    // Create the new chat with the correct userId
+
     const newChatId = await ctx.db.insert("chats", {
       userId,
       title: `Branch of ${originalChat.title}`,
@@ -771,7 +738,6 @@ export const branchChat = mutation({
       isBranch: true,
     });
 
-    // Copy messages to the new chat
     for (const message of messagesForNewChat) {
       const { _id, _creationTime, ...messageData } = message;
       await ctx.db.insert("messages", {

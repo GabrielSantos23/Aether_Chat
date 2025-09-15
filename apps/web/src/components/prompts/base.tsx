@@ -7,8 +7,6 @@ export function getPrompt(opts: {
   user: Doc<"users">;
   activeTools?: Tool[];
 }) {
-  console.log(`🎯 getPrompt called with activeTools:`, opts.activeTools);
-
   const preferences = (opts.user as any)?.preferences;
   let preferencesText = "";
 
@@ -43,16 +41,12 @@ export function getPrompt(opts: {
   }
 
   if (opts.activeTools?.includes("research" as any)) {
-    console.log(`🎯 Using research tool prompt`);
     return getResearchToolPrompt(preferencesText);
   }
 
   if (opts.activeTools?.includes("search" as any)) {
-    console.log(`🎯 Using search tool prompt`);
     return getSearchToolPrompt(preferencesText);
   }
-
-  console.log(`🎯 Using default prompt (no special tools)`);
 
   return `
     Today's date is ${new Date().toLocaleDateString("en-US", {

@@ -37,7 +37,6 @@ const useQuery = (endpoint: any, params: any) => {
 
 const useMutation = (endpoint: any) => {
   return async (params: any) => {
-    console.log("Mock mutation called with:", params);
     return Promise.resolve();
   };
 };
@@ -79,7 +78,6 @@ export default function ModelSelector() {
 
   useEffect(() => {}, [selectedModelId, selectedModel]);
 
-  // Filter models to only show enabled ones
   const availableModels = enabledModelsList;
   const pinnedModels = availableModels.filter((model) =>
     pinnedModelIds.includes(model.id)
@@ -96,7 +94,6 @@ export default function ModelSelector() {
   }, [open]);
 
   const handleSelectModel = async (model: Model) => {
-    // Check if model is enabled before selecting
     if (!isModelEnabled(model.id)) {
       toast.error(
         `${model.name} is currently disabled. Enable it in account settings.`
@@ -107,7 +104,6 @@ export default function ModelSelector() {
     setSelectedModelId(model.id);
     setOpen(false);
 
-    // Only try to save settings if user is authenticated
     if (user) {
       try {
         await updateSettings({
@@ -116,7 +112,6 @@ export default function ModelSelector() {
         });
       } catch (error) {
         console.error("Failed to update model:", error);
-        // Revert context state on error
         setSelectedModelId(settings?.modelId || "gemini-2.0-flash");
       }
     }
@@ -142,14 +137,12 @@ export default function ModelSelector() {
     setPinnedModelIds(updated);
 
     try {
-      // Update backend settings
       await updateSettings({
         userId: user.email,
         pinnedModels: updated,
       });
     } catch (error) {
       console.error("Failed to update pinned models:", error);
-      // Revert local state on error
       setPinnedModelIds(settings?.pinnedModels || pinnedModelIdsDefault);
     }
   };
@@ -181,7 +174,6 @@ export default function ModelSelector() {
     );
   }
 
-  // Show message if no models are enabled
   if (availableModels.length === 0) {
     return (
       <div className="w-full max-w-md mx-auto p-4">
@@ -371,7 +363,6 @@ export default function ModelSelector() {
             </div>
           </Command>
 
-          {/* Hover card for model details */}
           <div className="absolute top-0 right-0 translate-x-full pl-2 hidden md:block">
             {hoveredModel && (
               <div className="rounded-md flex flex-col gap-4 w-64 border border-foreground/10 overflow-hidden relative before:bg-sidebar/50 before:backdrop-blur-md before:absolute before:inset-0 before:z-[-1]">

@@ -1,4 +1,3 @@
-// Custom Tavily client implementation
 export interface TavilySearchResult {
   title: string;
   url: string;
@@ -38,7 +37,7 @@ export class TavilyClient {
   }
 
   /**
-   * Perform a web search using Tavily API
+   * Perform a web search
    */
   async search(
     query: string,
@@ -69,7 +68,7 @@ export class TavilyClient {
       search_depth: searchDepth,
       include_answer: includeAnswer,
       include_raw_content: includeRawContent,
-      max_results: Math.min(Math.max(maxResults, 1), 20), // Clamp between 1-20
+      max_results: Math.min(Math.max(maxResults, 1), 20),
       include_images: includeImages,
       include_domains: includeDomains.length > 0 ? includeDomains : undefined,
       exclude_domains: excludeDomains.length > 0 ? excludeDomains : undefined,
@@ -108,7 +107,6 @@ export class TavilyClient {
       const data = await response.json();
       const responseTime = Date.now() - startTime;
 
-      // Validate and normalize response
       return {
         query,
         follow_up_questions: data.follow_up_questions || [],
@@ -134,9 +132,6 @@ export class TavilyClient {
     }
   }
 
-  /**
-   * Get search context - useful for follow-up queries
-   */
   async getContext(
     query: string,
     options: Omit<TavilySearchOptions, "includeAnswer"> = {}
@@ -158,9 +153,6 @@ export class TavilyClient {
     return { context, sources };
   }
 
-  /**
-   * Search with automatic query enhancement for recent events
-   */
   async searchRecent(
     query: string,
     options: TavilySearchOptions = {}
@@ -170,7 +162,6 @@ export class TavilyClient {
       month: "long",
     });
 
-    // Enhance query for recent events
     let enhancedQuery = query;
     const recentTerms = ["recent", "latest", "last", "current", "this year"];
     const hasRecentTerm = recentTerms.some((term) =>
@@ -187,9 +178,6 @@ export class TavilyClient {
     });
   }
 
-  /**
-   * Batch search multiple queries
-   */
   async batchSearch(
     queries: string[],
     options: TavilySearchOptions = {}
@@ -202,11 +190,9 @@ export class TavilyClient {
       throw new Error("Maximum 10 queries per batch");
     }
 
-    // Execute searches in parallel with rate limiting
     const promises = queries.map(
       (query, index) =>
         new Promise<TavilySearchResponse>((resolve, reject) => {
-          // Stagger requests to avoid rate limiting
           setTimeout(async () => {
             try {
               const result = await this.search(query, options);
@@ -214,16 +200,13 @@ export class TavilyClient {
             } catch (error) {
               reject(error);
             }
-          }, index * 100); // 100ms delay between requests
+          }, index * 100);
         })
     );
 
     return Promise.all(promises);
   }
 
-  /**
-   * Normalize and validate search results
-   */
   private normalizeResults(results: any[]): TavilySearchResult[] {
     return results
       .filter((result) => result && typeof result === "object")
@@ -237,25 +220,19 @@ export class TavilyClient {
             : 0,
         published_date: result.published_date || undefined,
       }))
-      .filter((result) => result.url && result.content); // Filter out invalid results
+      .filter((result) => result.url && result.content);
   }
 
-  /**
-   * Sanitize string content
-   */
   private sanitizeString(str: string): string {
     if (typeof str !== "string") return "";
 
     return str
-      .replace(/[\x00-\x1F\x7F]/g, "") // Remove control characters
-      .replace(/\s+/g, " ") // Normalize whitespace
+      .replace(/[\x00-\x1F\x7F]/g, "")
+      .replace(/\s+/g, " ")
       .trim()
-      .substring(0, 2000); // Limit length
+      .substring(0, 2000);
   }
 
-  /**
-   * Validate URL format
-   */
   private validateUrl(url: string): string | null {
     if (typeof url !== "string") return null;
 
@@ -268,9 +245,6 @@ export class TavilyClient {
   }
 }
 
-/**
- * Custom error class for Tavily operations
- */
 export class TavilyError extends Error {
   public statusCode: number;
 
@@ -281,16 +255,10 @@ export class TavilyError extends Error {
   }
 }
 
-/**
- * Factory function to create Tavily client (matches @tavily/core API)
- */
 export function tavily(apiKey: string): TavilyClient {
   return new TavilyClient(apiKey);
 }
 
-/**
- * Helper function to create search tool for AI SDK
- */
 export function createTavilySearchTool(apiKey: string) {
   const client = tavily(apiKey);
 

@@ -8,7 +8,6 @@ import { Brain, CheckIcon, SearchIcon, X, ExternalLink } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useSidebar } from "@/contexts/sidebar-context";
 
-// Types for tool sidebar state
 interface ToolSidebarState {
   tool: "search" | "research";
   messageId: string;
@@ -46,7 +45,6 @@ interface ToolCall {
   result: SearchResult[];
 }
 
-// Mock data for demonstration - replace with actual data from your chat system
 const mockToolSidebarState: ToolSidebarState | null = null;
 
 export function RightSidebar() {
@@ -82,7 +80,6 @@ export function RightSidebar() {
     return null;
   })();
 
-  // Expose functions globally for testing (remove in production)
   useEffect(() => {
     (window as any).closeToolSidebar = closeSidebar;
   }, [closeSidebar]);
@@ -183,7 +180,6 @@ function SearchToolSidebarContent({
   const results = searchResults || [];
 
   if (query) {
-    console.log("Search query:", query);
   }
 
   if (!results || results.length === 0) {
@@ -260,7 +256,6 @@ function SearchToolSidebarContent({
                 alt={result.title ?? "favicon"}
                 className="w-4 h-4 rounded-sm"
                 onError={(e) => {
-                  // Fallback to a generic icon if favicon fails to load
                   e.currentTarget.src =
                     "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='12' r='10'/%3E%3Cline x1='12' y1='8' x2='12' y2='16'/%3E%3Cline x1='8' y1='12' x2='16' y2='12'%3E%3C/svg%3E";
                 }}

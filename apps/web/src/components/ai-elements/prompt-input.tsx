@@ -68,17 +68,14 @@ export const PromptInputTextarea = ({
 }: PromptInputTextareaProps) => {
   const handleKeyDown: KeyboardEventHandler<HTMLTextAreaElement> = (e) => {
     if (e.key === "Enter") {
-      // Don't submit if IME composition is in progress
       if (e.nativeEvent.isComposing) {
         return;
       }
 
       if (e.shiftKey) {
-        // Allow newline
         return;
       }
 
-      // Submit on Enter (without Shift)
       e.preventDefault();
       const form = e.currentTarget.form;
       if (form) {
@@ -325,7 +322,6 @@ export function PromptInputAction({
   );
 }
 
-// Image Preview Components
 export type PromptInputImagePreviewProps = {
   file:
     | File
@@ -429,12 +425,10 @@ export function PromptInputFileUpload({
   const [isUploading, setIsUploading] = useState(false);
 
   const handleUploadBegin = () => {
-    console.log("PromptInputFileUpload: Upload started");
     setIsUploading(true);
   };
 
   const handleUploadComplete = (res: any[]) => {
-    console.log("PromptInputFileUpload: Upload complete:", res);
     setIsUploading(false);
     onUploadComplete?.(res);
   };

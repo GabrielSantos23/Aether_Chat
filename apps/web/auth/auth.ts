@@ -136,7 +136,6 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       (session.user as any).id = userId;
       (session as any).userId = userId;
 
-      // Generate Convex token if we have the required configuration
       if (
         process.env.CONVEX_AUTH_PRIVATE_KEY &&
         process.env.NEXT_PUBLIC_CONVEX_URL

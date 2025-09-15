@@ -62,7 +62,6 @@ export function ProDialog({ open, onOpenChange }: ProDialogProps) {
                 type="button"
                 className="backdrop-blur-md bg-white/80 border border-white/10 text-black/80 hover:bg-white/90"
                 onClick={() => {
-                  // TODO: Implement checkout flow
                   console.log("Pro subscription clicked");
                 }}
               >

@@ -1,11 +1,7 @@
 import { v } from "convex/values";
-import { query, mutation, action } from "./_generated/server";
+import { query, mutation } from "./_generated/server";
 import { api } from "./_generated/api";
 
-// Write your Convex functions in any file inside this directory (`convex`).
-// See https://docs.convex.dev/functions for more.
-
-// Store or update user information in the database
 export const storeUser = mutation({
   args: {
     tokenIdentifier: v.string(),
@@ -19,13 +15,11 @@ export const storeUser = mutation({
       throw new Error("Not authenticated");
     }
 
-    // First check if user already exists by tokenIdentifier
     let existingUser = await ctx.db
       .query("users")
       .withIndex("email", (q) => q.eq("email", args.email))
       .first();
 
-    // If not found by tokenIdentifier, try to find by email
     if (!existingUser) {
       existingUser = await ctx.db
         .query("users")
@@ -34,7 +28,6 @@ export const storeUser = mutation({
     }
 
     if (existingUser) {
-      // Update existing user and ensure tokenIdentifier is updated
       await ctx.db.patch(existingUser._id, {
         name: args.name,
         email: args.email,
@@ -43,7 +36,6 @@ export const storeUser = mutation({
       });
       return existingUser._id;
     } else {
-      // Create new user
       return await ctx.db.insert("users", {
         name: args.name,
         email: args.email,
@@ -54,7 +46,6 @@ export const storeUser = mutation({
   },
 });
 
-// Get the current user from the database
 export const getUser = query({
   args: {},
   handler: async (ctx) => {
@@ -63,13 +54,11 @@ export const getUser = query({
       return null;
     }
 
-    // Get email from identity
     const email = identity.email;
     if (!email) {
       return null;
     }
 
-    // Look up user by email
     const user = await ctx.db
       .query("users")
       .withIndex("email", (q) => q.eq("email", email))
@@ -79,7 +68,6 @@ export const getUser = query({
   },
 });
 
-// List todos for the current user
 export const listTodos = query({
   args: {},
   handler: async (ctx) => {
@@ -90,13 +78,11 @@ export const listTodos = query({
 
     const email = identity.email || "";
 
-    // Get user from database
     let user = await ctx.db
       .query("users")
       .withIndex("email", (q) => q.eq("email", email))
       .first();
 
-    // If not found by tokenIdentifier, try to find by email if we have one
     if (!user && email) {
       user = await ctx.db
         .query("users")
@@ -110,7 +96,6 @@ export const listTodos = query({
   },
 });
 
-// Update a user's tokenIdentifier
 export const updateUserTokenIdentifier = mutation({
   args: {
     email: v.string(),
@@ -122,14 +107,12 @@ export const updateUserTokenIdentifier = mutation({
       throw new Error("Not authenticated");
     }
 
-    // Find user by email
     const user = await ctx.db
       .query("users")
       .withIndex("email", (q) => q.eq("email", args.email))
       .first();
 
     if (user) {
-      // Update the tokenIdentifier
       await ctx.db.patch(user._id, {
         email: args.email,
         tokenIdentifier: args.tokenIdentifier,

@@ -34,7 +34,6 @@ import {
 import { Label } from "./ui/label";
 import { Input } from "./ui/input";
 
-// Define the Chat type based on the database schema
 type Chat = {
   _id: Id<"chats">;
   userId: Id<"users">;
@@ -263,15 +262,12 @@ function ChatItem({
     setChatToEdit(chat);
   };
 
-  // Determine if this chat is selected
-  // Accepts both `/chat/:id` and `/chat/:id/anything-else`
   const chatId = String(chat._id);
   const isSelected =
     location.pathname === `/chat/${chatId}` ||
     location.pathname.startsWith(`/chat/${chatId}/`);
 
-  // You can adjust the bg color as needed. Here, we use bg-muted for selected.
-  const selectedBg = "bg-muted dark:bg-muted/60"; // fallback for dark/light, adjust as needed
+  const selectedBg = "bg-muted dark:bg-muted/60";
 
   return (
     <SidebarMenuItem>
@@ -353,7 +349,6 @@ function EditChatTitleDialog({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const renameChat = useMutation(api.chat.mutations.renameChat);
 
-  // Update title when chat changes
   useEffect(() => {
     if (chat) {
       setTitle(chat.title);
@@ -444,7 +439,6 @@ function DeleteChatDialog({
     try {
       await deleteChat({ chatId: chat._id });
 
-      // If we're currently viewing this chat, navigate to a new chat
       const currentPath = window.location.pathname;
       if (currentPath === `/chat/${chat._id}`) {
         navigate("/chat");

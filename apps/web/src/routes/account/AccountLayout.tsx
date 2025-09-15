@@ -10,7 +10,6 @@ import {
 } from "lucide-react";
 import { Outlet, NavLink, useNavigate } from "react-router-dom";
 
-// Account Layout Component
 export default function AccountLayout() {
   const navigate = useNavigate();
 
@@ -20,7 +19,6 @@ export default function AccountLayout() {
       label: "Account",
       icon: <User size={18} />,
     },
-    // { path: "/account/index", label: "Overview",  },
     {
       path: "/account/subscription",
       label: "Subscription",

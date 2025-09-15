@@ -233,14 +233,13 @@ export const sendMessage = action({
       webSearch,
       imageGen,
       research,
-    } // <-- Add research here
+    }
   ): Promise<{
     success: boolean;
     userMessageId: Id<"messages">;
     assistantMessageId: Id<"messages">;
   }> => {
     try {
-      // Verify authentication and chat ownership first
       const identity = await ctx.auth.getUserIdentity();
       if (!identity) {
         throw new Error("Authentication required");
@@ -257,7 +256,6 @@ export const sendMessage = action({
 
       const isFirstMessage = messages.length === 0;
 
-      // Rate limit: only count user-originated messages
       await ctx.runMutation(api.limits.checkAndConsumeMessageCredit, {
         anonKey,
       });

@@ -2,20 +2,16 @@ import { streamText, tool, type CoreMessage, stepCountIs } from "ai";
 import { z } from "zod";
 import { tavily } from "../../../web/src/components/tavily/core";
 
-// Vercel AI SDK Providers
 import { createGoogleGenerativeAI } from "@ai-sdk/google";
 import { createOpenRouter } from "@openrouter/ai-sdk-provider";
 import { createGroq } from "@ai-sdk/groq";
 import { createOpenAICompatible } from "@ai-sdk/openai-compatible";
 
-// Your project's internal imports
 import { api } from "../_generated/api";
 import { Id } from "../_generated/dataModel";
 import { models } from "../../../web/src/lib/models";
 import { getPrompt } from "../../../web/src/components/prompts/base";
 import { generateImage } from "./node";
-
-// --- Types ---
 
 interface ToolConfig {
   webSearch?: boolean;
@@ -34,57 +30,43 @@ interface ModelConfig {
   provider: string;
 }
 
-// --- Tavily Client Setup ---
-
 const tavilyClient = tavily(process.env.TAVILY_API_KEY || "");
 
-// --- Advanced Web Search Tool ---
-
 export const advancedWebSearchTool = tool({
-      description:
+  description:
     "Search the web for up-to-date information with advanced filtering options",
-      inputSchema: z.object({
+  inputSchema: z.object({
     query: z
       .string()
       .min(1)
       .max(150)
       .describe("The search query to find relevant, recent information"),
     maxResults: z
-          .number()
+      .number()
       .min(1)
       .max(20)
-          .optional()
+      .optional()
       .describe("Maximum number of results to return (default: 7)"),
     searchDepth: z
       .enum(["basic", "advanced"])
-          .optional()
+      .optional()
       .describe("Search depth level (default: advanced)"),
     timeRange: z
       .enum(["week", "month", "year", "all"])
-          .optional()
+      .optional()
       .describe("Time range for search results (default: week)"),
-      }),
-      execute: async ({
+  }),
+  execute: async ({
     query,
     maxResults = 7,
     searchDepth = "advanced",
     timeRange = "week",
-      }) => {
-    console.log(
-      `🔍 Advanced Tavily search: "${query}" (${searchDepth}, ${timeRange})`
-    );
-
+  }) => {
     try {
       const response = await tavilyClient.search(query, {
         maxResults: maxResults,
         searchDepth: searchDepth,
-        // Note: timeRange is not directly supported in the custom Tavily client
-        // You may need to implement this feature or use a different approach
       });
-
-      console.log(
-        `✅ Tavily search successful: ${response.results.length} results`
-      );
 
       return response.results.map((result: any) => ({
         title: result.title,
@@ -93,44 +75,39 @@ export const advancedWebSearchTool = tool({
         score: result.score,
         publishedDate: result.published_date,
       }));
-        } catch (error) {
+    } catch (error) {
       console.error("❌ Tavily search failed:", error);
-          return {
+      return {
         error: "Failed to perform web search",
         message: (error as Error).message,
         query,
-          };
-        }
-      },
-    });
-
-// --- Image Generation Tool ---
+      };
+    }
+  },
+});
 
 export const imageGenerationTool = tool({
-      description:
+  description:
     "Generate high-quality images based on detailed text descriptions",
-      inputSchema: z.object({
+  inputSchema: z.object({
     prompt: z
-          .string()
+      .string()
       .min(10)
       .max(500)
       .describe("Detailed description of the image to generate"),
     style: z
       .enum(["realistic", "artistic", "cartoon", "abstract"])
-          .optional()
+      .optional()
       .describe("Visual style for the generated image"),
     quality: z
       .enum(["standard", "high"])
-          .optional()
+      .optional()
       .describe("Image quality setting"),
   }),
   execute: async ({ prompt, style = "realistic", quality = "high" }) => {
-    console.log(`🎨 Generating image: "${prompt}" (${style}, ${quality})`);
-
     try {
-      // This would integrate with your existing generateImage function
       const imageUrl = await generateImage(
-        null, // ctx will be passed from the main function
+        null,
         `${prompt} in ${style} style`,
         process.env.GEMINI_API_KEY || ""
       );
@@ -142,18 +119,16 @@ export const imageGenerationTool = tool({
         style,
         quality,
       };
-        } catch (error) {
+    } catch (error) {
       console.error("❌ Image generation failed:", error);
-          return {
+      return {
         error: "Failed to generate image",
         message: (error as Error).message,
         prompt,
-          };
-        }
-      },
-    });
-
-// --- Tool Registry ---
+      };
+    }
+  },
+});
 
 const createToolRegistry = (config: ToolConfig, ctx: any) => {
   const tools: Record<string, any> = {};
@@ -169,16 +144,8 @@ const createToolRegistry = (config: ToolConfig, ctx: any) => {
     activeToolNames.push("generateImage");
   }
 
-  // Add more tools here as needed
-  // if (config.research) {
-  //   tools.research = researchTool;
-  //   activeToolNames.push("research");
-  // }
-
   return { tools, activeToolNames };
 };
-
-// --- Model Management ---
 
 const getModelConfig = (modelId: string): ModelConfig => {
   const model = models.find((m) => m.id === modelId);
@@ -198,17 +165,14 @@ const getModelConfig = (modelId: string): ModelConfig => {
 };
 
 const getActiveApiKey = async (ctx: any, service: string): Promise<string> => {
-  // Try user's API key first
   const userKey = await ctx.runQuery(api.api_keys.getUserDefaultApiKey, {
     service,
   });
 
   if (userKey) {
-    console.log(`Using user's ${service} API key`);
     return userKey;
   }
 
-  // Fall back to environment variables
   const envVarMap: Record<string, string | undefined> = {
     gemini: process.env.GEMINI_API_KEY,
     groq: process.env.GROQ_API_KEY,
@@ -218,7 +182,6 @@ const getActiveApiKey = async (ctx: any, service: string): Promise<string> => {
 
   const envKey = envVarMap[service];
   if (envKey) {
-    console.log(`Using environment ${service} API key`);
     return envKey;
   }
 
@@ -252,8 +215,6 @@ const initializeModel = async (ctx: any, provider: string, modelId: string) => {
   }
 };
 
-// --- User Management ---
-
 export async function findUser(
   ctx: any,
   { tokenIdentifier, email }: { tokenIdentifier: string; email?: string }
@@ -282,7 +243,6 @@ export async function getOrCreateUserId(
     throw new Error("Token identifier is required");
   }
 
-  // Try to find user by token first, then by email
   let existingUser = await ctx.runQuery(api.users.getUserByToken, {
     tokenIdentifier,
   });
@@ -310,8 +270,6 @@ export async function getOrCreateUserId(
   });
 }
 
-// --- Core AI Response Generation ---
-
 export const generateAIResponse = async (
   ctx: any,
   chatMessages: CoreMessage[],
@@ -329,7 +287,6 @@ export const generateAIResponse = async (
       throw new Error("Invalid context provided");
     }
 
-    // Add system message if this is the first turn
     if (chatMessages.length === 1) {
       chatMessages.unshift({
         role: "system",
@@ -344,7 +301,6 @@ export const generateAIResponse = async (
 
     const aiModel = await initializeModel(ctx, provider, model.id);
 
-    // Get user context
     const identity = await ctx.auth.getUserIdentity();
     const userId = await getOrCreateUserId(
       ctx,
@@ -362,16 +318,8 @@ export const generateAIResponse = async (
       settings: userSettings,
     };
 
-    // Setup tools
     const { tools, activeToolNames } = createToolRegistry(toolConfig, ctx);
 
-    console.log(
-      `🤖 Model: ${
-        model.id
-      }, Provider: ${provider}, Active Tools: [${activeToolNames.join(", ")}]`
-    );
-
-    // Get personalized system prompt
     const systemPrompt = getPrompt({
       ctx,
       user: {
@@ -382,115 +330,165 @@ export const generateAIResponse = async (
       activeTools: activeToolNames as ("research" | "search" | "image")[],
     });
 
-    // Generate AI response with real-time streaming
     const result = streamText({
       model: aiModel,
       system: systemPrompt,
       messages: chatMessages,
       tools: Object.keys(tools).length > 0 ? tools : undefined,
-      stopWhen: stepCountIs(10), // Stop after 10 steps
+      stopWhen: stepCountIs(10),
     });
 
-    // Process the stream in real-time
     let accumulatedContent = "";
     let accumulatedToolCalls: any[] = [];
+    let accumulatedThinking = "";
+    const thinkingStart = Date.now();
 
     try {
-      for await (const delta of result.textStream) {
-        accumulatedContent += delta;
+      const processors: Promise<void>[] = [];
 
-        // Update message with current content
-          await ctx.runMutation(api.chat.mutations.updateMessage, {
-            messageId: assistantMessageId,
-            content: accumulatedContent,
-            isComplete: false,
-          });
-      }
+      processors.push(
+        (async () => {
+          for await (const delta of result.textStream) {
+            accumulatedContent += delta;
 
-      // Process tool calls and results from the full stream
-      for await (const delta of result.fullStream) {
-        if (delta.type === "tool-call") {
-          const mappedToolCall = {
-            toolCallId:
-              delta.toolCallId || `call_${Date.now()}_${Math.random()}`,
-            toolName: delta.toolName,
-            args: delta.input || {},
-            result: undefined,
-          };
-
-          accumulatedToolCalls.push(mappedToolCall);
-
-          // Update message with tool calls
             await ctx.runMutation(api.chat.mutations.updateMessage, {
               messageId: assistantMessageId,
               content: accumulatedContent,
-              toolCalls: accumulatedToolCalls,
-            isComplete: false,
-          });
-        } else if (delta.type === "tool-result") {
-          const toolCall = accumulatedToolCalls.find(
-            (tc) => tc.toolCallId === delta.toolCallId
-          );
-          if (toolCall) {
-            toolCall.result = delta.output;
+              isComplete: false,
+            });
           }
+        })()
+      );
 
-          // Update message with tool results
-            await ctx.runMutation(api.chat.mutations.updateMessage, {
-              messageId: assistantMessageId,
-            content: accumulatedContent,
-              toolCalls: accumulatedToolCalls,
-            isComplete: false,
-          });
-        }
+      processors.push(
+        (async () => {
+          for await (const delta of result.fullStream) {
+            if (delta.type === "tool-call") {
+              const mappedToolCall = {
+                toolCallId:
+                  delta.toolCallId || `call_${Date.now()}_${Math.random()}`,
+                toolName: delta.toolName,
+                args: delta.input || {},
+                result: undefined,
+              };
+
+              accumulatedToolCalls.push(mappedToolCall);
+
+              await ctx.runMutation(api.chat.mutations.updateMessage, {
+                messageId: assistantMessageId,
+                content: accumulatedContent,
+                toolCalls: accumulatedToolCalls,
+                isComplete: false,
+              });
+            } else if (delta.type === "tool-result") {
+              const toolCall = accumulatedToolCalls.find(
+                (tc) => tc.toolCallId === delta.toolCallId
+              );
+              if (toolCall) {
+                toolCall.result = delta.output;
+              }
+
+              await ctx.runMutation(api.chat.mutations.updateMessage, {
+                messageId: assistantMessageId,
+                content: accumulatedContent,
+                toolCalls: accumulatedToolCalls,
+                isComplete: false,
+              });
+            } else if (
+              // Some providers may emit reasoning segments via fullStream
+              // Guard for experimental shapes
+              (delta as any).type === "reasoning" ||
+              (delta as any).reasoning
+            ) {
+              const reasoningChunk =
+                (delta as any).text || (delta as any).reasoning || "";
+              if (reasoningChunk) {
+                accumulatedThinking += reasoningChunk;
+                await ctx.runMutation(api.chat.mutations.updateMessage, {
+                  messageId: assistantMessageId,
+                  thinking: accumulatedThinking,
+                  isComplete: false,
+                });
+              }
+            }
+          }
+        })()
+      );
+
+      // Dedicated reasoning stream if exposed by the SDK/provider
+      const maybeReasoningStream: any = (result as any).reasoningStream;
+      if (
+        maybeReasoningStream &&
+        typeof maybeReasoningStream[Symbol.asyncIterator] === "function"
+      ) {
+        processors.push(
+          (async () => {
+            for await (const r of maybeReasoningStream) {
+              const chunk = typeof r === "string" ? r : r?.text ?? "";
+              if (chunk) {
+                accumulatedThinking += chunk;
+                await ctx.runMutation(api.chat.mutations.updateMessage, {
+                  messageId: assistantMessageId,
+                  thinking: accumulatedThinking,
+                  isComplete: false,
+                });
+              }
+            }
+          })()
+        );
       }
 
-      // Final update with completion
-          await ctx.runMutation(api.chat.mutations.updateMessage, {
-            messageId: assistantMessageId,
-            content: accumulatedContent,
-            toolCalls: accumulatedToolCalls,
-            isComplete: true,
-          });
+      await Promise.all(processors);
 
-      console.log(`✅ AI response generated successfully`);
+      await ctx.runMutation(api.chat.mutations.updateMessage, {
+        messageId: assistantMessageId,
+        content: accumulatedContent,
+        toolCalls: accumulatedToolCalls,
+        thinking: accumulatedThinking || undefined,
+        thinkingDuration: Math.max(
+          0,
+          Math.ceil((Date.now() - thinkingStart) / 1000)
+        ),
+        isComplete: true,
+      });
 
       return {
         success: true,
         content: accumulatedContent,
         toolCalls: accumulatedToolCalls,
-        toolResults: [], // Tool results are embedded in toolCalls
-        usage: undefined, // Usage info not available in streamText
+        toolResults: [],
+        usage: undefined,
       };
     } catch (streamError) {
       console.error("❌ Stream processing error:", streamError);
 
-      // Update message with error
-        await ctx.runMutation(api.chat.mutations.updateMessage, {
-          messageId: assistantMessageId,
-          content:
+      await ctx.runMutation(api.chat.mutations.updateMessage, {
+        messageId: assistantMessageId,
+        content:
           accumulatedContent +
           "\n\n*An error occurred while generating the response.*",
-          isComplete: true,
-        });
+        thinking: accumulatedThinking || undefined,
+        thinkingDuration: Math.max(
+          0,
+          Math.ceil((Date.now() - thinkingStart) / 1000)
+        ),
+        isComplete: true,
+      });
 
       throw streamError;
     }
   } catch (error) {
     console.error("❌ Error in generateAIResponse:", error);
 
-    // Update message with error
-      await ctx.runMutation(api.chat.mutations.updateMessage, {
-        messageId: assistantMessageId,
+    await ctx.runMutation(api.chat.mutations.updateMessage, {
+      messageId: assistantMessageId,
       content:
         "I apologize, but I encountered an error while generating a response. Please try again.",
-        isComplete: true,
+      isComplete: true,
     });
 
     throw error;
   }
 };
-
-// --- Legacy compatibility function ---
 
 export const webSearchTool = advancedWebSearchTool;

@@ -19,7 +19,6 @@ export function SourcesButton({ toolCalls }: SourcesButtonProps) {
   const [isHovered, setIsHovered] = useState(false);
   const { openSearchSidebar } = useSidebar();
 
-  // Find web search tool calls
   const searchToolCalls =
     toolCalls?.filter((tc) => tc.toolName === "webSearch") || [];
 
@@ -37,7 +36,6 @@ export function SourcesButton({ toolCalls }: SourcesButtonProps) {
 
   const handleClick = () => {
     openSearchSidebar(searchResults, query);
-    // The UI sidebar will be opened by the SidebarTrigger in the header
   };
 
   return (

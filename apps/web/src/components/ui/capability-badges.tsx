@@ -32,7 +32,6 @@ export function CapabilityBadges({
           bgColor: "bg-pink-400/10",
           iconColor: "text-pink-400",
         };
-      // Coding-related
       case "coding":
       case "basic-coding":
         return {
@@ -40,7 +39,6 @@ export function CapabilityBadges({
           bgColor: "bg-green-400/10",
           iconColor: "text-green-400",
         };
-      // Analysis / writing / chat map to existing icons
       case "analysis":
         return {
           icon: Eye,

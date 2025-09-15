@@ -65,7 +65,6 @@ import { AIMessage } from "./ai-elements/ai-message";
 import { toast } from "sonner";
 import { ProDialog } from "./pro-dialog";
 
-// Create a context for prompt input
 const PromptInputContext = createContext<{
   attachedFiles: Array<{
     name: string;
@@ -123,22 +122,19 @@ export default function ChatInterface({
   );
   const [proDialogOpen, setProDialogOpen] = useState(false);
 
-  // Tool selection state - now using a single tool state
-  const [tool, setTool] = useState<string>(""); // '' for chat, 'search' for web search, 'research' for deep research
+  const [tool, setTool] = useState<string>("");
 
-  // Get the selected model info to check tool capabilities
   const selectedModel = models.find((model) => model.id === selectedModelId);
 
-  // Tool availability states based on selected model
   const canSearch = !!(
     selectedModel?.toolCalls && selectedModel?.features?.includes("web")
   );
-  const canModelUseTools = selectedModel?.toolCalls ?? false; // Check if selected model supports tool calls
+  const canModelUseTools = selectedModel?.toolCalls ?? false;
   const canModelViewFiles =
-    selectedModel?.features?.includes("vision") ?? false; // Check if model supports file uploads
-  const remainingSearches = 10; // Replace with actual remaining searches
-  const canResearch = selectedModel?.canResearch ?? false; // Check if selected model can do research
-  const remainingResearches = 5; // Replace with actual remaining researches
+    selectedModel?.features?.includes("vision") ?? false;
+  const remainingSearches = 10;
+  const canResearch = selectedModel?.canResearch ?? false;
+  const remainingResearches = 5;
 
   useEffect(() => {
     if (chatId) {
@@ -148,7 +144,6 @@ export default function ChatInterface({
     }
   }, [chatId]);
 
-  // Cleanup blob URLs on unmount
   useEffect(() => {
     return () => {
       attachedFiles.forEach((file) => {
@@ -241,15 +236,13 @@ export default function ChatInterface({
 
     if (validFiles.length === 0) return;
 
-    // Create temporary URLs for preview while files are being uploaded
     const previewFiles = validFiles.map((file) => ({
       name: file.name,
       type: file.type,
       size: file.size,
-      url: URL.createObjectURL(file), // Create a temporary URL for preview
+      url: URL.createObjectURL(file),
     }));
 
-    // Store the preview files immediately
     setAttachedFiles((prev) => [...prev, ...previewFiles]);
 
     toast.success(`${previewFiles.length} file(s) uploaded successfully`);
@@ -259,10 +252,7 @@ export default function ChatInterface({
     }
   };
 
-  // Handle UploadThing completion
   const handleUploadThingComplete = (uploadedFiles: any[]) => {
-    console.log("UploadThing completion received:", uploadedFiles);
-
     const files = uploadedFiles.map((file) => ({
       name: file.name,
       type: file.type,
@@ -270,12 +260,8 @@ export default function ChatInterface({
       url: file.url,
     }));
 
-    console.log("Processed files:", files);
-
-    // Add the uploaded files directly to the attached files
     setAttachedFiles((prev) => {
       const newFiles = [...prev, ...files];
-      console.log("Updated attached files:", newFiles);
       return newFiles;
     });
 
@@ -285,7 +271,6 @@ export default function ChatInterface({
   const removeAttachedFile = (index: number) => {
     setAttachedFiles((prev) => {
       const newFiles = prev.filter((_, i) => i !== index);
-      // Clean up blob URL if it exists
       const fileToRemove = prev[index];
       if (fileToRemove?.url.startsWith("blob:")) {
         URL.revokeObjectURL(fileToRemove.url);
@@ -315,13 +300,13 @@ export default function ChatInterface({
         message: text.trim(),
         modelId: selectedModelId,
         webSearch: tool === "search",
-        imageGen: false, // You can add image generation as another tool option
+        imageGen: false,
         research: tool === "research",
         attachments: attachedFiles,
       });
 
       setText("");
-      setAttachedFiles([]); // Clear attached files after sending
+      setAttachedFiles([]);
     } catch (error) {
       console.error("Failed to send message:", error);
       toast.error("Failed to send message");
@@ -366,7 +351,6 @@ export default function ChatInterface({
     return undefined;
   };
 
-  // Determine if we should show a banner (which affects the input styling)
   const shouldShowBanner = match({ editingMessageId, remainingCredits, isPro })
     .with(
       {
@@ -570,7 +554,6 @@ export default function ChatInterface({
                 </div>
               )}
 
-              {/* Banner warnings */}
               {match({ editingMessageId, remainingCredits, isPro })
                 .with(
                   {

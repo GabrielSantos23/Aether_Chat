@@ -14,13 +14,11 @@ import {
 import { Separator } from "@/components/ui/separator";
 import { useSession } from "next-auth/react";
 import { toast } from "sonner";
-import { Plus, X, Eye, EyeOff } from "lucide-react";
-import { useState } from "react";
+import { X } from "lucide-react";
 import z from "zod";
 import { useMutation, useQuery } from "convex/react";
 import { api } from "@aether-ai-2/backend/convex/_generated/api";
 
-// Schemas for validation
 const roleSchema = z.object({
   value: z
     .string()
@@ -49,7 +47,6 @@ const observationSchema = z.object({
     .max(500, "Observation must be 500 characters or less"),
 });
 
-// Predefined role options
 const ROLE_OPTIONS = [
   "Software Developer",
   "Designer",
@@ -134,7 +131,6 @@ export function UserProfileCards() {
   const handleAddObservation = async (value: string) => {
     try {
       const newObservations = [...(userProfile.observations || []), value];
-      // Backend merges observations uniquely if provided
       await updateUserSettings({ observations: newObservations });
       toast.success("Observation added successfully");
     } catch (error) {
@@ -160,7 +156,6 @@ export function UserProfileCards() {
 
   return (
     <div className="space-y-6">
-      {/* User Role Card */}
       <AccountCard
         title="User Role"
         description="Define your primary role or profession to help personalize interactions"
@@ -191,7 +186,6 @@ export function UserProfileCards() {
 
       <Separator />
 
-      {/* User Traits Card */}
       <AccountCard
         title="User Traits"
         description="Add personality traits and characteristics to personalize your experience"
@@ -242,7 +236,6 @@ export function UserProfileCards() {
 
       <Separator />
 
-      {/* Additional Information Card */}
       <AccountCard
         title="Additional Information"
         description="Provide any additional context about yourself or your work"
@@ -266,7 +259,6 @@ export function UserProfileCards() {
 
       <Separator />
 
-      {/* Prompt Template Card */}
       <AccountCard
         title="Prompt Template"
         description="Customize how you want responses to be formatted and structured"
@@ -294,7 +286,6 @@ export function UserProfileCards() {
 
       <Separator />
 
-      {/* Observations Card */}
       <AccountCard
         title="Observations"
         description="Track insights and notes about your preferences and patterns"

@@ -7,7 +7,6 @@ export interface TokenState {
   completionTokens: number;
   totalTokens: number;
   toolCost: number;
-  // Allow arbitrary extensions
   [key: string]: any;
 }
 

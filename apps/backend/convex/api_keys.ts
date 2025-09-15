@@ -1,15 +1,11 @@
 import { query, mutation } from "./_generated/server";
 import { v } from "convex/values";
-import { getOneFrom } from "convex-helpers/server/relationships";
-import { Id } from "./_generated/dataModel";
 import { MutationCtx, QueryCtx } from "./_generated/server";
 
-// Helper function to get or create a user record
 async function getOrCreateUserId(
   ctx: MutationCtx | QueryCtx,
   tokenIdentifier: string
 ) {
-  // First, try to find the user by tokenIdentifier
   const user = await ctx.db
     .query("users")
     .withIndex("email", (q) => q.eq("email", tokenIdentifier))
@@ -19,17 +15,13 @@ async function getOrCreateUserId(
     return user._id;
   }
 
-  // If we're in a query context, we can't create a user
   if ("query" in ctx.db && !("insert" in ctx.db)) {
-    // Instead of throwing an error, return null to indicate user not found
     return null;
   }
 
-  // If user doesn't exist, create a minimal user record
-  // This is a fallback and should be properly handled in user onboarding
   const userId = await (ctx.db as MutationCtx["db"]).insert("users", {
     name: "User",
-    email: tokenIdentifier, // This should be updated with actual user data
+    email: tokenIdentifier,
     image: "",
   });
 
@@ -46,7 +38,7 @@ export const getApiKeys = query({
 
     const userId = await getOrCreateUserId(ctx, identity.tokenIdentifier);
     if (!userId) {
-      return []; // Return empty array if user not found
+      return [];
     }
 
     return await ctx.db
@@ -74,7 +66,7 @@ export const hasApiKeyForProvider = query({
 
     const userId = await getOrCreateUserId(ctx, identity.tokenIdentifier);
     if (!userId) {
-      return false; // Return false if user not found
+      return false;
     }
 
     const apiKey = await ctx.db
@@ -111,13 +103,11 @@ export const saveApiKey = mutation({
     }
 
     if (_id) {
-      // It's an update
       const existingKey = await ctx.db.get(_id);
       if (!existingKey || existingKey.userId !== userId)
         throw new Error("Not authorized to edit this key");
       await ctx.db.patch(_id, { name, key });
     } else {
-      // It's a new key - check if this is the first key for this service
       const existingKeys = await ctx.db
         .query("apiKeys")
         .withIndex("by_user_and_service", (q) =>
@@ -125,7 +115,6 @@ export const saveApiKey = mutation({
         )
         .collect();
 
-      // If this is the first key for this service, make it default
       const isFirstKey = existingKeys.length === 0;
 
       await ctx.db.insert("apiKeys", {
@@ -157,7 +146,6 @@ export const deleteApiKey = mutation({
     const wasDefault = existingKey.is_default;
     await ctx.db.delete(_id);
 
-    // If we deleted the default key, set another key as default
     if (wasDefault) {
       const remainingKeys = await ctx.db
         .query("apiKeys")
@@ -167,7 +155,6 @@ export const deleteApiKey = mutation({
         .collect();
 
       if (remainingKeys.length > 0) {
-        // Set the first remaining key as default
         await ctx.db.patch(remainingKeys[0]._id, { is_default: true });
       }
     }
@@ -189,7 +176,6 @@ export const setDefaultApiKey = mutation({
     if (!targetKey || targetKey.userId !== userId)
       throw new Error("Key not found or not authorized");
 
-    // Unset any other default key for the same service
     const otherDefaults = await ctx.db
       .query("apiKeys")
       .withIndex("by_user_and_service", (q) =>
@@ -202,7 +188,6 @@ export const setDefaultApiKey = mutation({
       await ctx.db.patch(key._id, { is_default: false });
     }
 
-    // Set the new default
     await ctx.db.patch(_id, { is_default: true });
   },
 });
@@ -225,10 +210,9 @@ export const getUserDefaultApiKey = query({
 
     const userId = await getOrCreateUserId(ctx, identity.tokenIdentifier);
     if (!userId) {
-      return null; // Return null if user not found
+      return null;
     }
 
-    // First try to get the default key
     const defaultKey = await ctx.db
       .query("apiKeys")
       .withIndex("by_user_and_service", (q) =>
@@ -241,7 +225,6 @@ export const getUserDefaultApiKey = query({
       return defaultKey.key;
     }
 
-    // If no default key, get any key for the service
     const anyKey = await ctx.db
       .query("apiKeys")
       .withIndex("by_user_and_service", (q) =>
@@ -263,7 +246,7 @@ export const getDisabledModels = query({
 
     const userId = await getOrCreateUserId(ctx, identity.tokenIdentifier);
     if (!userId) {
-      return []; // Return empty array if user not found
+      return [];
     }
 
     const userSettings = await ctx.db
@@ -290,17 +273,14 @@ export const updateDisabledModels = mutation({
       throw new Error("User not found");
     }
 
-    // Check if user settings exist
     const userSettings = await ctx.db
       .query("userSettings")
       .withIndex("by_user", (q) => q.eq("userId", userId))
       .first();
 
     if (userSettings) {
-      // Update existing settings
       await ctx.db.patch(userSettings._id, { disabledModels });
     } else {
-      // Create new settings
       await ctx.db.insert("userSettings", {
         userId,
         disabledModels,

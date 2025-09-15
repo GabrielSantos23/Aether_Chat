@@ -2,7 +2,6 @@ import { createOpenAICompatible } from "@ai-sdk/openai-compatible";
 import { createOpenRouter } from "@openrouter/ai-sdk-provider";
 import { createGoogleGenerativeAI } from "@ai-sdk/google";
 
-// Simple wrapper to obtain language model instances across providers
 export function getModel(
   provider: string,
   modelId: string,
@@ -21,7 +20,6 @@ export function getModel(
     }
     case "azure":
     default: {
-      // Fallback to generic OpenAI-compatible endpoint (works for Azure setups too)
       const apiKey = apiKeyOverride || process.env.OPENAI_API_KEY || "";
       const openai = createOpenAICompatible({
         apiKey,

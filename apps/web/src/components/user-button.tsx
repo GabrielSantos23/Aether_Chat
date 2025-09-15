@@ -1,4 +1,3 @@
-// Updated UserButton component with correct signOut implementation
 import { Button } from "@/components/ui/button";
 import {
   Popover,
@@ -74,9 +73,7 @@ export function UserButton({
     );
   }
 
-  // Normalize user data from different sources
   const normalizeUser = (): NormalizedUser | null => {
-    // Priority: prop user > Convex user > session user
     if (user) {
       return {
         id: user.id,
@@ -152,7 +149,6 @@ export function UserButton({
         align="end"
         sideOffset={8}
       >
-        {/* User info header */}
         <div className="p-3 border-b border-foreground/10">
           <div className="flex flex-col overflow-hidden">
             <div className="text-sm truncate">{currentUser.name || "User"}</div>
@@ -256,7 +252,6 @@ export const signOutFunction = async () => {
     await signOut({
       redirect: false,
     });
-    console.log("Successfully signed out");
   } catch (error) {
     console.error("Failed to sign out:", error);
   }

@@ -7,7 +7,6 @@ import { CircularLoader } from "@/components/ui/loader";
 const ProtectedRoute = () => {
   const { data: session, status } = useSession();
 
-  // Show loading while NextAuth is loading
   if (status === "loading") {
     return (
       <div className="flex items-center justify-center h-screen">

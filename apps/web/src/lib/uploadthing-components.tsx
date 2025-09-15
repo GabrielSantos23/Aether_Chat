@@ -32,16 +32,13 @@ export function FileUploadButton({
       appearance={appearance}
       content={content}
       onBeforeUploadBegin={(files) => {
-        console.log("FileUploadButton: Before upload begin with files:", files);
         onUploadBegin?.(files);
         return files;
       }}
       onUploadProgress={(progress) => {
-        console.log("FileUploadButton: Upload progress:", progress);
         onUploadProgress?.(progress);
       }}
       onClientUploadComplete={(res: any[]) => {
-        console.log("FileUploadButton: Files uploaded:", res);
         onUploadComplete?.(res);
       }}
       onUploadError={(error: Error) => {
@@ -63,7 +60,6 @@ export function FileUploadDropzone({
     <UploadDropzone<OurFileRouter, "fileUploader">
       endpoint="fileUploader"
       onClientUploadComplete={(res: any[]) => {
-        console.log("Files: ", res);
         onUploadComplete?.(res);
       }}
       onUploadError={(error: Error) => {
@@ -85,7 +81,6 @@ export function FileUploader({
     <Uploader<OurFileRouter, "fileUploader">
       endpoint="fileUploader"
       onClientUploadComplete={(res: any[]) => {
-        console.log("Files: ", res);
         onUploadComplete?.(res);
       }}
       onUploadError={(error: Error) => {

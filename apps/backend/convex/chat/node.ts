@@ -84,17 +84,14 @@ export const sendMessage = action({
   },
 });
 
-// Function to generate an image using Google's Gemini API
 export async function generateImage(
   ctx: any,
   prompt: string,
   userGeminiKey: string | null
 ) {
   try {
-    // Use user's key if available, otherwise use system key
     const apiKey = userGeminiKey || process.env.GEMINI_API_KEY;
 
-    // Use Google Gen AI SDK for image generation
     const { GoogleGenAI } = await import("@google/genai");
     const genAI = new GoogleGenAI({ apiKey });
 
@@ -123,7 +120,6 @@ export async function generateImage(
       let imageUrl;
 
       try {
-        // Convert base64 to binary and store as PNG
         const byteCharacters = atob(imageData);
         const byteNumbers = new Array(byteCharacters.length);
         for (let i = 0; i < byteCharacters.length; i++) {
@@ -132,11 +128,9 @@ export async function generateImage(
         const byteArray = new Uint8Array(byteNumbers);
         const imageBlob = new Blob([byteArray], { type: "image/png" });
 
-        // Store the PNG file
         storageId = await ctx.storage.store(imageBlob);
         imageUrl = await ctx.storage.getUrl(storageId);
 
-        // Save to aiImages table
         const identity = await ctx.auth.getUserIdentity();
         if (identity) {
           const userId = await ctx.runMutation(
@@ -157,8 +151,8 @@ export async function generateImage(
           success: true,
           prompt: prompt,
           description: description,
-          url: imageUrl, // alias for convenience
-          imageUrl: imageUrl, // keep original for compatibility
+          url: imageUrl,
+          imageUrl: imageUrl,
           storageId: storageId,
           timestamp: new Date().toISOString(),
           usedUserKey: !!userGeminiKey,
@@ -167,7 +161,6 @@ export async function generateImage(
       } catch (error) {
         console.error("Error storing image data:", error);
 
-        // Return a meaningful error
         return {
           success: false,
           error: "Failed to process image data. Please try again.",
@@ -175,8 +168,6 @@ export async function generateImage(
           timestamp: new Date().toISOString(),
         };
       }
-
-      // This code is unreachable now as we return directly in the try/catch block above
     } else {
       return {
         success: false,
@@ -188,7 +179,6 @@ export async function generateImage(
   } catch (error: any) {
     console.error("Image generation error:", error);
 
-    // Provide more specific error message for common issues
     let errorMessage = error?.message || String(error);
     if (errorMessage.includes("Buffer is not defined")) {
       errorMessage =

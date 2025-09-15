@@ -2,7 +2,6 @@ import { mutation, query } from "./_generated/server";
 import { v } from "convex/values";
 import { Id } from "./_generated/dataModel";
 
-// Mutation to save a deep-research report for the authenticated user
 export const saveResearchReport = mutation({
   args: {
     prompt: v.string(),
@@ -15,7 +14,7 @@ export const saveResearchReport = mutation({
       throw new Error("User must be authenticated to save research reports.");
     }
 
-    const userId = identity.subject as any as Id<"users">;
+    const userId = identity.subject as Id<"users">;
 
     await ctx.db.insert("researchReports", {
       userId,
@@ -27,7 +26,6 @@ export const saveResearchReport = mutation({
   },
 });
 
-// Query to get all research reports for the authenticated user
 export const getUserResearchReports = query({
   args: {},
   handler: async (ctx) => {

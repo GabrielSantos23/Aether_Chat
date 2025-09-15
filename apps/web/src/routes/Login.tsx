@@ -41,7 +41,6 @@ const LoginPage = () => {
   const [success, setSuccess] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // New: Social loading state
   const [socialLoading, setSocialLoading] = useState<
     null | "google" | "github"
   >(null);
@@ -54,7 +53,6 @@ const LoginPage = () => {
     resolver: zodResolver(emailSchema),
   });
 
-  // Check for URL parameters on component mount
   useEffect(() => {
     const urlError = searchParams.get("error");
     const urlSuccess = searchParams.get("success");
@@ -65,7 +63,6 @@ const LoginPage = () => {
     }
     if (urlSuccess && email) {
       setSuccess(`Successfully signed in with ${email}`);
-      // Redirect to chat after a short delay
       setTimeout(() => {
         navigate("/chat");
       }, 2000);
@@ -117,13 +114,11 @@ const LoginPage = () => {
     sendMagicLink(data.email);
   };
 
-  // Social sign-in handlers
   const handleSocialSignIn = async (provider: "google" | "github") => {
     setSocialLoading(provider);
     try {
       await signIn(provider);
     } finally {
-      // Don't reset socialLoading here, as signIn will redirect or update session
     }
   };
 
@@ -159,14 +154,12 @@ const LoginPage = () => {
               </span>
             </div>
 
-            {/* Error Message */}
             {error && (
               <div className="w-full p-3 bg-red-50 border border-red-200 rounded-md">
                 <p className="text-sm text-red-600">{error}</p>
               </div>
             )}
 
-            {/* Success Message */}
             {success && (
               <div className="w-full p-3 bg-green-50 border border-green-200 rounded-md">
                 <div className="flex items-center gap-2">
@@ -176,7 +169,6 @@ const LoginPage = () => {
               </div>
             )}
 
-            {/* Email Form */}
             <form onSubmit={handleSubmit(onSubmit)} className="w-full">
               <div className="flex flex-col gap-2 w-full">
                 <Label htmlFor="email" className="text-sm font-medium">
@@ -221,7 +213,6 @@ const LoginPage = () => {
               </div>
             </form>
 
-            {/* Resend Button */}
             {emailSent && (
               <div className="w-full">
                 <Button

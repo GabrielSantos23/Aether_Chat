@@ -2,12 +2,10 @@ import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
 import { findUser, getOrCreateUserId } from "./chat/shared";
 
-// Window configuration: 5 hours in milliseconds
 const WINDOW_MS = 5 * 60 * 60 * 1000;
 
-// Limits
-const GUEST_LIMIT = 10; // per window
-const USER_LIMIT = 20; // per window (non-pro)
+const GUEST_LIMIT = 10;
+const USER_LIMIT = 20;
 
 export const getStatus = query({
   args: {
@@ -19,15 +17,12 @@ export const getStatus = query({
     const now = Date.now();
 
     if (identity) {
-      // Logged-in user
-      // Determine role
       const user = await findUser(ctx, {
         tokenIdentifier: identity.tokenIdentifier || "",
         email: identity.email || undefined,
       });
       const userConvexId = user?._id;
 
-      // Only check settings if we have a user document
       const userSettings = userConvexId
         ? await ctx.db
             .query("userSettings")
@@ -40,7 +35,6 @@ export const getStatus = query({
         return { role: "pro", allowed: true, remaining: Infinity } as any;
       }
 
-      // Prefer lookup by userId; fallback to tokenIdentifier
       let usage = userConvexId
         ? await ctx.db
             .query("messageUsage")
@@ -67,9 +61,7 @@ export const getStatus = query({
         remaining: Math.max(0, USER_LIMIT - usage.count),
       };
     } else {
-      // Guest
       if (!anonKey) {
-        // Without anonKey we can't track reliably; deny by default
         return { role: "guest", allowed: false, remaining: 0 };
       }
 
@@ -100,7 +92,6 @@ export const checkAndConsumeMessageCredit = mutation({
     const now = Date.now();
 
     if (identity) {
-      // Check role for pro users
       const userConvexId = await getOrCreateUserId(
         ctx,
         identity.tokenIdentifier || "",
@@ -117,7 +108,6 @@ export const checkAndConsumeMessageCredit = mutation({
         return { allowed: true, remaining: Infinity } as any;
       }
 
-      // Non-pro user: enforce USER_LIMIT per window
       const tokenIdentifier = identity.tokenIdentifier || "";
       let usage = await ctx.db
         .query("messageUsage")
@@ -134,11 +124,6 @@ export const checkAndConsumeMessageCredit = mutation({
       }
 
       if (!usage) {
-        // create new window starting now
-        console.log(
-          "[limits] creating new usage window for user",
-          String(userConvexId)
-        );
         await ctx.db.insert("messageUsage", {
           userId: userConvexId as any,
           tokenIdentifier,
@@ -151,11 +136,6 @@ export const checkAndConsumeMessageCredit = mutation({
       }
 
       if (now - usage.windowStart >= WINDOW_MS) {
-        // reset window
-        console.log(
-          "[limits] resetting usage window for user",
-          String(userConvexId)
-        );
         await ctx.db.patch(usage._id, {
           count: 1,
           windowStart: now,
@@ -174,16 +154,10 @@ export const checkAndConsumeMessageCredit = mutation({
         count: usage.count + 1,
         lastUpdated: now,
       });
-      console.log(
-        "[limits] incremented usage for user",
-        String(userConvexId),
-        "to",
-        usage.count + 1
-      );
+
       return { allowed: true, remaining: USER_LIMIT - (usage.count + 1) };
     }
 
-    // Guest flow
     if (!anonKey) {
       throw new Error(
         "Anonymous usage requires an anonKey. Please provide anonKey from the client."

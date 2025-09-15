@@ -1,4 +1,3 @@
-// convex/research.ts
 import { v } from "convex/values";
 import { mutation, query, action } from "../_generated/server";
 import { api } from "../_generated/api";
@@ -12,7 +11,6 @@ import {
 } from "ai";
 import { z } from "zod";
 
-// Types
 interface ResearchAction {
   type: "search" | "read";
   toolCallId: string;
@@ -34,7 +32,6 @@ interface ResearchSession {
   completedAt?: number;
 }
 
-// Schema definitions
 export const researchInputSchema = v.object({
   thoughts: v.string(),
   prompt: v.string(),
@@ -49,7 +46,6 @@ export const researchActionSchema = v.object({
   timestamp: v.number(),
 });
 
-// Database schema for research_sessions table
 export const researchSessionSchema = v.object({
   userId: v.string(),
   prompt: v.string(),
@@ -65,7 +61,6 @@ export const researchSessionSchema = v.object({
   completedAt: v.optional(v.number()),
 });
 
-// Mutations
 export const createResearchSession = mutation({
   args: {
     userId: v.string(),
@@ -125,7 +120,6 @@ export const addResearchAction = mutation({
   },
 });
 
-// Queries
 export const getResearchSession = query({
   args: { sessionId: v.id("research_sessions") },
   handler: async (ctx, args) => {
@@ -144,7 +138,6 @@ export const getUserResearchSessions = query({
   },
 });
 
-// Usage tracking mutations
 export const incrementUsage = mutation({
   args: {
     userId: v.string(),
@@ -202,7 +195,6 @@ export const getUserUsage = query({
   },
 });
 
-// Main research action
 export const performResearch = action({
   args: {
     userId: v.string(),
@@ -220,7 +212,6 @@ export const performResearch = action({
     summary: string;
     actions: ResearchAction[];
   }> => {
-    // Check usage limits
     const usage = await ctx.runQuery(api.ai.research.getUserUsage, {
       userId: args.userId,
     });
@@ -230,7 +221,6 @@ export const performResearch = action({
       throw new Error("Research limit reached");
     }
 
-    // Create research session
     const sessionId: Id<"research_sessions"> = await ctx.runMutation(
       api.ai.research.createResearchSession,
       {
@@ -241,7 +231,6 @@ export const performResearch = action({
     );
 
     try {
-      // Increment usage
       await ctx.runMutation(api.ai.research.incrementUsage, {
         userId: args.userId,
         type: "research",
@@ -251,7 +240,6 @@ export const performResearch = action({
       const toolCallId = `research_${sessionId}_${Date.now()}`;
       const actions: ResearchAction[] = [];
 
-      // Generate research summary with tools
       const { text: summary } = await generateText({
         model: "openai/gpt-4o", // Using a more accessible model
         prompt: getResearchPrompt(args.prompt),
@@ -278,13 +266,11 @@ export const performResearch = action({
 
               actions.push(action);
 
-              // Add action to database
               await ctx.runMutation(api.ai.research.addResearchAction, {
                 sessionId,
                 action,
               });
 
-              // Simulate search results (replace with actual search implementation)
               return await simulateSearch(query);
             },
           }),
@@ -309,13 +295,11 @@ export const performResearch = action({
 
               actions.push(action);
 
-              // Add action to database
               await ctx.runMutation(api.ai.research.addResearchAction, {
                 sessionId,
                 action,
               });
 
-              // Simulate reading site (replace with actual implementation)
               return await simulateReadSite(url);
             },
           }),
@@ -356,7 +340,6 @@ export const performResearch = action({
         },
       });
 
-      // Update session with final results
       await ctx.runMutation(api.ai.research.updateResearchSession, {
         sessionId,
         summary,
@@ -372,13 +355,11 @@ export const performResearch = action({
     } catch (error) {
       console.error("Research error:", error);
 
-      // Mark session as failed
       await ctx.runMutation(api.ai.research.updateResearchSession, {
         sessionId,
         status: "failed",
       });
 
-      // Decrement usage on failure
       await ctx.runMutation(api.ai.research.decrementUsage, {
         userId: args.userId,
         type: "research",
@@ -390,10 +371,7 @@ export const performResearch = action({
   },
 });
 
-// Helper functions (you'll need to implement these with actual search/read functionality)
 async function simulateSearch(query: string) {
-  // Replace this with actual search implementation (Exa, Serper, etc.)
-  console.log(`Searching for: ${query}`);
   return {
     results: [
       {
@@ -406,15 +384,12 @@ async function simulateSearch(query: string) {
 }
 
 async function simulateReadSite(url: string) {
-  // Replace this with actual site reading implementation
-  console.log(`Reading site: ${url}`);
   return {
     content: `This is simulated content from ${url}. In a real implementation, this would contain the actual webpage content.`,
     title: "Example Page Title",
   };
 }
 
-// Research prompt function (you'll need to implement this)
 function getResearchPrompt(userPrompt: string): string {
   return `You are a research assistant tasked with thoroughly researching the following topic:
 
@@ -431,7 +406,6 @@ Use the available tools to search and read sources. Provide your thoughts on eac
 Begin your research now.`;
 }
 
-// Convex schema definitions (add to convex/schema.ts)
 /*
 import { defineSchema, defineTable } from "convex/server";
 import { v } from "convex/values";
@@ -457,8 +431,6 @@ export default defineSchema({
 
   user_usage: defineTable({
     userId: v.string(),
-    research: v.optional(v.number()),
-    // Add other usage types as needed
   }).index("by_user", ["userId"]),
 });
 */

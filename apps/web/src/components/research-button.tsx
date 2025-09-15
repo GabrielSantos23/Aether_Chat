@@ -19,7 +19,6 @@ export function ResearchButton({ toolCalls }: ResearchButtonProps) {
   const [isHovered, setIsHovered] = useState(false);
   const { openResearchSidebar } = useSidebar();
 
-  // Find research tool calls
   const researchToolCalls =
     toolCalls?.filter((tc) => tc.toolName === "research") || [];
 
@@ -27,7 +26,6 @@ export function ResearchButton({ toolCalls }: ResearchButtonProps) {
     return null;
   }
 
-  // Get the first research result (you might want to handle multiple research calls)
   const researchCall = researchToolCalls[0];
   const researchResults = researchCall?.result || [];
   const query = researchCall?.args?.query || "Research results";
