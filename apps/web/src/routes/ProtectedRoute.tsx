@@ -8,11 +8,7 @@ const ProtectedRoute = () => {
   const { data: session, status } = useSession();
 
   if (status === "loading") {
-    return (
-      <div className="flex items-center justify-center h-screen">
-        <CircularLoader />
-      </div>
-    );
+    return <div className="flex items-center justify-center h-screen"></div>;
   }
 
   return session ? <Outlet /> : <Navigate to="/auth" replace />;

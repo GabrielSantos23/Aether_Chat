@@ -24,6 +24,7 @@ export default function AccountSubscription() {
   const isExpiring = subscriptionData?.isExpiring || false;
   return (
     <div className="flex flex-col gap-y-5">
+      <title>Subscription | Aether</title>
       <AccountCard title="Subscription" description="Manage your subscription">
         <div className="space-y-4">
           <div className="flex flex-col gap-4 bg-card p-4 rounded-lg border">

@@ -238,36 +238,76 @@ export async function getOrCreateUserId(
   ctx: any,
   tokenIdentifier: string,
   email?: string
-): Promise<Id<"users">> {
+): Promise<Id<"users"> | null> {
   if (!tokenIdentifier) {
     throw new Error("Token identifier is required");
   }
 
-  let existingUser = await ctx.runQuery(api.users.getUserByToken, {
-    tokenIdentifier,
-  });
+  const isActionContext =
+    typeof ctx.runQuery === "function" && typeof ctx.runMutation === "function";
 
-  if (!existingUser && email) {
-    existingUser = await ctx.runQuery(api.users.getUserByEmail, {
-      email,
+  if (isActionContext) {
+    let existingUser = await ctx.runQuery(api.users.getUserByToken, {
+      tokenIdentifier,
     });
-  }
 
-  if (existingUser) {
-    if (email && !existingUser.tokenIdentifier) {
-      await ctx.runMutation(api.users.updateUserToken, {
-        userId: existingUser._id,
-        tokenIdentifier,
+    if (!existingUser && email) {
+      existingUser = await ctx.runQuery(api.users.getUserByEmail, {
+        email,
       });
     }
-    return existingUser._id;
-  }
 
-  return ctx.runMutation(api.users.createUser, {
-    name: email?.split("@")[0] || "New User",
-    email,
-    tokenIdentifier,
-  });
+    if (existingUser) {
+      if (email && !existingUser.tokenIdentifier) {
+        await ctx.runMutation(api.users.updateUserToken, {
+          userId: existingUser._id,
+          tokenIdentifier,
+        });
+      }
+      return existingUser._id;
+    }
+
+    return ctx.runMutation(api.users.createUser, {
+      name: email?.split("@")[0] || "New User",
+      email,
+      image: "",
+      tokenIdentifier,
+    });
+  } else {
+    const isMutationContext = typeof ctx.db.insert === "function";
+
+    let existingUser = await ctx.db
+      .query("users")
+      .withIndex("by_token", (q: any) =>
+        q.eq("tokenIdentifier", tokenIdentifier)
+      )
+      .first();
+
+    if (!existingUser && email) {
+      existingUser = await ctx.db
+        .query("users")
+        .withIndex("email", (q: any) => q.eq("email", email))
+        .first();
+    }
+
+    if (existingUser) {
+      if (email && !existingUser.tokenIdentifier && isMutationContext) {
+        await ctx.db.patch(existingUser._id, { tokenIdentifier });
+      }
+      return existingUser._id;
+    }
+
+    if (!isMutationContext) {
+      return null;
+    }
+
+    return ctx.db.insert("users", {
+      name: email?.split("@")[0] || "New User",
+      email,
+      image: "",
+      tokenIdentifier,
+    });
+  }
 }
 
 export const generateAIResponse = async (
@@ -308,14 +348,20 @@ export const generateAIResponse = async (
       identity?.email
     );
 
+    if (!userId) {
+      throw new Error("User not found or could not be created");
+    }
+
+    const nonNullUserId: Id<"users"> = userId;
+
     const userSettings = await ctx.runQuery(api.users.getMySettings, {
-      userId,
+      userId: nonNullUserId,
     });
 
     const userContext: UserContext = {
-      userId,
-      email: userSettings.email,
-      settings: userSettings,
+      userId: nonNullUserId,
+      email: userSettings?.email || "",
+      settings: userSettings || {},
     };
 
     const { tools, activeToolNames } = createToolRegistry(toolConfig, ctx);
@@ -323,12 +369,15 @@ export const generateAIResponse = async (
     const systemPrompt = getPrompt({
       ctx,
       user: {
-        _id: userId,
+        _id: nonNullUserId,
         _creationTime: 0,
         email: userContext.email || "",
       },
       activeTools: activeToolNames as ("research" | "search" | "image")[],
     });
+
+    // Check if model supports reasoning
+    const supportsReasoning = checkModelSupportsReasoning(modelId, provider);
 
     const result = streamText({
       model: aiModel,
@@ -343,26 +392,60 @@ export const generateAIResponse = async (
     let accumulatedThinking = "";
     const thinkingStart = Date.now();
 
+    // Batch updates to reduce concurrency issues
+    let lastUpdateTime = 0;
+    const UPDATE_INTERVAL = 100; // Update every 100ms max
+    let pendingUpdate: any = null;
+
+    const scheduleUpdate = async (updateData: any) => {
+      const now = Date.now();
+      if (now - lastUpdateTime < UPDATE_INTERVAL) {
+        // Merge with pending update
+        if (pendingUpdate) {
+          pendingUpdate = { ...pendingUpdate, ...updateData };
+        } else {
+          pendingUpdate = updateData;
+        }
+        return;
+      }
+
+      // Execute pending update if exists
+      if (pendingUpdate) {
+        await ctx.runMutation(api.chat.mutations.updateMessage, {
+          messageId: assistantMessageId,
+          ...pendingUpdate,
+          isComplete: false,
+        });
+        pendingUpdate = null;
+      }
+
+      // Execute current update
+      await ctx.runMutation(api.chat.mutations.updateMessage, {
+        messageId: assistantMessageId,
+        ...updateData,
+        isComplete: false,
+      });
+      lastUpdateTime = now;
+    };
+
     try {
       const processors: Promise<void>[] = [];
 
+      // Process text stream
       processors.push(
         (async () => {
           for await (const delta of result.textStream) {
             accumulatedContent += delta;
-
-            await ctx.runMutation(api.chat.mutations.updateMessage, {
-              messageId: assistantMessageId,
-              content: accumulatedContent,
-              isComplete: false,
-            });
+            await scheduleUpdate({ content: accumulatedContent });
           }
         })()
       );
 
+      // Process full stream for tool calls and reasoning
       processors.push(
         (async () => {
           for await (const delta of result.fullStream) {
+            // Handle tool calls
             if (delta.type === "tool-call") {
               const mappedToolCall = {
                 toolCallId:
@@ -374,13 +457,13 @@ export const generateAIResponse = async (
 
               accumulatedToolCalls.push(mappedToolCall);
 
-              await ctx.runMutation(api.chat.mutations.updateMessage, {
-                messageId: assistantMessageId,
+              await scheduleUpdate({
                 content: accumulatedContent,
                 toolCalls: accumulatedToolCalls,
-                isComplete: false,
               });
-            } else if (delta.type === "tool-result") {
+            }
+            // Handle tool results
+            else if (delta.type === "tool-result") {
               const toolCall = accumulatedToolCalls.find(
                 (tc) => tc.toolCallId === delta.toolCallId
               );
@@ -388,26 +471,20 @@ export const generateAIResponse = async (
                 toolCall.result = delta.output;
               }
 
-              await ctx.runMutation(api.chat.mutations.updateMessage, {
-                messageId: assistantMessageId,
+              await scheduleUpdate({
                 content: accumulatedContent,
                 toolCalls: accumulatedToolCalls,
-                isComplete: false,
               });
-            } else if (
-              // Some providers may emit reasoning segments via fullStream
-              // Guard for experimental shapes
-              (delta as any).type === "reasoning" ||
-              (delta as any).reasoning
-            ) {
-              const reasoningChunk =
-                (delta as any).text || (delta as any).reasoning || "";
-              if (reasoningChunk) {
-                accumulatedThinking += reasoningChunk;
-                await ctx.runMutation(api.chat.mutations.updateMessage, {
-                  messageId: assistantMessageId,
+            } else if (delta.type === "reasoning-delta" && supportsReasoning) {
+              const reasoningText =
+                typeof delta.text === "string" ? delta.text : "";
+
+              if (reasoningText) {
+                accumulatedThinking += reasoningText;
+
+                await scheduleUpdate({
+                  content: accumulatedContent,
                   thinking: accumulatedThinking,
-                  isComplete: false,
                 });
               }
             }
@@ -415,31 +492,77 @@ export const generateAIResponse = async (
         })()
       );
 
-      // Dedicated reasoning stream if exposed by the SDK/provider
-      const maybeReasoningStream: any = (result as any).reasoningStream;
-      if (
-        maybeReasoningStream &&
-        typeof maybeReasoningStream[Symbol.asyncIterator] === "function"
-      ) {
-        processors.push(
-          (async () => {
-            for await (const r of maybeReasoningStream) {
-              const chunk = typeof r === "string" ? r : r?.text ?? "";
-              if (chunk) {
-                accumulatedThinking += chunk;
-                await ctx.runMutation(api.chat.mutations.updateMessage, {
-                  messageId: assistantMessageId,
-                  thinking: accumulatedThinking,
-                  isComplete: false,
-                });
+      if (supportsReasoning) {
+        const finalResult = await result;
+
+        if (finalResult.reasoning) {
+          processors.push(
+            (async () => {
+              try {
+                const reasoning = await finalResult.reasoning;
+                if (typeof reasoning === "string" && reasoning) {
+                  accumulatedThinking = reasoning;
+
+                  await scheduleUpdate({
+                    thinking: accumulatedThinking,
+                  });
+                }
+              } catch (reasoningError) {
+                console.warn("Could not access reasoning:", reasoningError);
               }
-            }
-          })()
-        );
+            })()
+          );
+        }
+
+        try {
+          const reasoningStream = (result as any).reasoningStream;
+          if (
+            reasoningStream &&
+            typeof reasoningStream[Symbol.asyncIterator] === "function"
+          ) {
+            processors.push(
+              (async () => {
+                try {
+                  for await (const reasoningChunk of reasoningStream) {
+                    const text =
+                      typeof reasoningChunk === "string"
+                        ? reasoningChunk
+                        : reasoningChunk?.text || reasoningChunk?.content || "";
+
+                    if (text && typeof text === "string") {
+                      accumulatedThinking += text;
+
+                      await scheduleUpdate({
+                        thinking: accumulatedThinking,
+                      });
+                    }
+                  }
+                } catch (streamError) {
+                  console.warn("Reasoning stream error:", streamError);
+                }
+              })()
+            );
+          }
+        } catch (reasoningStreamError) {
+          console.warn(
+            "Could not access reasoning stream:",
+            reasoningStreamError
+          );
+        }
       }
 
       await Promise.all(processors);
 
+      // Flush any pending updates
+      if (pendingUpdate) {
+        await ctx.runMutation(api.chat.mutations.updateMessage, {
+          messageId: assistantMessageId,
+          ...pendingUpdate,
+          isComplete: false,
+        });
+      }
+
+      // Final update with complete message
       await ctx.runMutation(api.chat.mutations.updateMessage, {
         messageId: assistantMessageId,
         content: accumulatedContent,
@@ -490,5 +613,43 @@ export const generateAIResponse = async (
     throw error;
   }
 };
+
+function checkModelSupportsReasoning(
+  modelId: string,
+  provider: string
+): boolean {
+  const reasoningModels = [
+    "o1-preview",
+    "o1-mini",
+    "o1-pro",
+    "deepseek-reasoner",
+    "gemini-2.0-flash-thinking-exp",
+    "claude-3-5-sonnet-20241022",
+    "google/gemini-2.5-flash",
+    "google/gemini-2.5-pro",
+    "openai/gpt-5",
+    "openai/gpt-5-mini",
+    "deepseek/deepseek-r1-0528:free",
+    "deepseek-ai/deepseek-r1-distill-llama-70b",
+    "deepseek/deepseek-chat-v3-0324:free",
+    "zhipuai/glm-4.5",
+    "zhipuai/glm-4.5-air",
+    "zhipuai/glm-4.5v",
+    "openai/gpt-4o",
+    "openai/gpt-4o-mini",
+    "openai/gpt-5-nano",
+    "openai/gpt-oss-120b",
+    "openai/gpt-oss-20b",
+    "x-ai/grok-3",
+    "x-ai/grok-3-mini",
+  ];
+
+  return (
+    reasoningModels.some((model) => modelId.includes(model)) ||
+    provider === "deepseek" ||
+    (provider === "openai" && modelId.startsWith("o1")) ||
+    (provider === "gemini" && modelId.includes("thinking"))
+  );
+}
 
 export const webSearchTool = advancedWebSearchTool;

@@ -220,7 +220,7 @@ export const models: Model[] = [
       "Grok 3 is xAI's advanced language model with strong reasoning capabilities and real-time information access.",
     capabilities: ["tools", "reasoning"],
     icon: "openrouter",
-    access: "public",
+    access: "premium_required",
     pinned: false,
   },
   {

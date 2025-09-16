@@ -41,38 +41,34 @@ function SidebarLayout() {
 function AppRoutes() {
   const { data: session, status } = useSession();
 
-  if (status === "loading") {
-    return (
-      <div className="flex items-center justify-center h-screen">
-        <CircularLoader />
-      </div>
-    );
-  }
-
   return (
     <Routes>
       <Route path="/auth" element={<LoginPage />} />
       <Route path="/shared/:shareId" element={<SharedChatPage />} />
+
+      <Route element={<SidebarLayout />}>
+        <Route path="/chat" element={<Chat />} />
+        <Route path="/chat/:id" element={<Chat />} />
+      </Route>
+
       <Route element={<ProtectedRoute />}>
         <Route element={<SidebarLayout />}>
-          <Route path="/chat" element={<Chat />} />
-          <Route path="/chat/:id" element={<Chat />} />
           <Route path="/gallery" element={<GalleryPage />} />
           <Route path="/research" element={<ResearchPage />} />
           <Route path="/test-upload" element={<TestUploadPage />} />
           <Route path="/test-resend" element={<TestResendPage />} />
         </Route>
 
-        <Route path="/account" element={<AccountLayout />}>
-          <Route index element={<AccountDashboard />} />
-          <Route path="index" element={<AccountIndex />} />
-          <Route path="appearance" element={<AccountAppearance />} />
-          <Route path="models" element={<AccountModels />} />
-          <Route path="preferences" element={<AccountPreferences />} />
-          <Route path="subscription" element={<AccountSubscription />} />
-        </Route>
-
         <Route path="/settings" element={<SettingsPage />} />
+      </Route>
+
+      <Route path="/account" element={<AccountLayout />}>
+        <Route index element={<AccountDashboard />} />
+        <Route path="index" element={<AccountIndex />} />
+        <Route path="appearance" element={<AccountAppearance />} />
+        <Route path="models" element={<AccountModels />} />
+        <Route path="preferences" element={<AccountPreferences />} />
+        <Route path="subscription" element={<AccountSubscription />} />
       </Route>
       <Route path="/" element={<Navigate to="/chat" replace />} />
       <Route path="*" element={<NotFoundPage />} />

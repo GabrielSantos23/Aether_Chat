@@ -8,11 +8,20 @@ async function getOrCreateUserId(
 ) {
   const user = await ctx.db
     .query("users")
-    .withIndex("email", (q) => q.eq("email", tokenIdentifier))
+    .withIndex("by_token", (q) => q.eq("tokenIdentifier", tokenIdentifier))
     .first();
 
   if (user) {
     return user._id;
+  }
+
+  const userByEmail = await ctx.db
+    .query("users")
+    .withIndex("email", (q) => q.eq("email", tokenIdentifier))
+    .first();
+
+  if (userByEmail) {
+    return userByEmail._id;
   }
 
   if ("query" in ctx.db && !("insert" in ctx.db)) {
@@ -23,6 +32,7 @@ async function getOrCreateUserId(
     name: "User",
     email: tokenIdentifier,
     image: "",
+    tokenIdentifier: tokenIdentifier,
   });
 
   return userId;

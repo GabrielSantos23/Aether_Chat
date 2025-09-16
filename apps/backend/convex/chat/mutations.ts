@@ -22,6 +22,10 @@ export const createChat = mutation({
       identity.email
     );
 
+    if (!userId) {
+      throw new Error("User not found or could not be created");
+    }
+
     const now = Date.now();
     const chatId = await ctx.db.insert("chats", {
       userId,
@@ -78,6 +82,10 @@ export const addMessage = mutation({
       identity.tokenIdentifier,
       identity.email
     );
+
+    if (!userId) {
+      throw new Error("User not found or could not be created");
+    }
 
     const chat = await ctx.db.get(chatId);
     if (!chat) {
@@ -223,6 +231,10 @@ export const updateMessage = mutation({
       identity.email
     );
 
+    if (!userId) {
+      throw new Error("User not found or could not be created");
+    }
+
     const message = await ctx.db.get(messageId);
     if (!message) {
       throw new Error("Message not found");
@@ -264,6 +276,10 @@ export const addAnnotation = mutation({
       identity.tokenIdentifier,
       identity.email
     );
+
+    if (!userId) {
+      throw new Error("User not found or could not be created");
+    }
 
     const message = await ctx.db.get(messageId);
     if (!message) {
@@ -308,6 +324,10 @@ export const cancelMessage = mutation({
       identity.tokenIdentifier,
       identity.email
     );
+
+    if (!userId) {
+      throw new Error("User not found or could not be created");
+    }
 
     const message = await ctx.db.get(messageId);
     if (!message) {
@@ -509,6 +529,10 @@ export const deleteAllConversations = mutation({
       identity.email
     );
 
+    if (!userId) {
+      throw new Error("User not found or could not be created");
+    }
+
     const chats = await ctx.db
       .query("chats")
       .withIndex("by_user", (q) => q.eq("userId", userId))
@@ -544,6 +568,10 @@ export const deleteAllNonPinnedChats = mutation({
       identity.tokenIdentifier,
       identity.email
     );
+
+    if (!userId) {
+      throw new Error("User not found or could not be created");
+    }
 
     const chats = await ctx.db
       .query("chats")
@@ -602,6 +630,10 @@ export const migrateAnonymousChats = mutation({
       identity.tokenIdentifier,
       identity.email
     );
+
+    if (!userId) {
+      throw new Error("User not found or could not be created");
+    }
 
     const migratedChatIds: { [key: string]: Id<"chats"> } = {};
 

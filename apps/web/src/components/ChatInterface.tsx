@@ -59,6 +59,8 @@ import {
   EditIcon,
   XIcon,
   FileIcon,
+  UserIcon,
+  LogInIcon,
 } from "lucide-react";
 import { UserMessage } from "./ai-elements/user-message";
 import { AIMessage } from "./ai-elements/ai-message";
@@ -100,7 +102,7 @@ export default function ChatInterface({
   chatId,
   className,
 }: ChatInterfaceProps) {
-  const { data: session } = useSession();
+  const { data: session, status } = useSession();
   const { selectedModelId, setSelectedModelId } = useModel();
   const [text, setText] = useState<string>("");
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -192,6 +194,9 @@ export default function ChatInterface({
   const isChatLoading = messages === undefined && currentChatId;
   const isNewChat = !chatId && !currentChatId;
   const hasMessages = messages && messages.length > 0;
+
+  // Check if user is not authenticated
+  const isUnauthenticated = status === "unauthenticated" || !session?.user;
 
   const createNewChat = useCallback(async () => {
     if (!session?.user) return null;
@@ -351,12 +356,25 @@ export default function ChatInterface({
     return undefined;
   };
 
-  const shouldShowBanner = match({ editingMessageId, remainingCredits, isPro })
+  const shouldShowBanner = match({
+    editingMessageId,
+    remainingCredits,
+    isPro,
+    isUnauthenticated,
+  })
+    .with(
+      {
+        isUnauthenticated: true,
+        editingMessageId: P.nullish,
+      },
+      () => true
+    )
     .with(
       {
         remainingCredits: P.number.lte(0),
         isPro: false,
         editingMessageId: P.nullish,
+        isUnauthenticated: false,
       },
       () => true
     )
@@ -365,6 +383,7 @@ export default function ChatInterface({
         remainingCredits: P.number.lt(18),
         isPro: false,
         editingMessageId: P.nullish,
+        isUnauthenticated: false,
       },
       () => true
     )
@@ -373,6 +392,7 @@ export default function ChatInterface({
         remainingCredits: P.number.lte(0),
         isPro: true,
         editingMessageId: P.nullish,
+        isUnauthenticated: false,
       },
       () => true
     )
@@ -381,6 +401,7 @@ export default function ChatInterface({
         remainingCredits: P.number.lt(10),
         isPro: true,
         editingMessageId: P.nullish,
+        isUnauthenticated: false,
       },
       () => true
     )
@@ -554,12 +575,43 @@ export default function ChatInterface({
                 </div>
               )}
 
-              {match({ editingMessageId, remainingCredits, isPro })
+              {match({
+                editingMessageId,
+                remainingCredits,
+                isPro,
+                isUnauthenticated,
+              })
+                .with(
+                  {
+                    isUnauthenticated: true,
+                    editingMessageId: P.nullish,
+                  },
+                  () => (
+                    <div className="flex justify-between items-center px-3 py-3 bg-sidebar/30 backdrop-blur-md text-xs text-muted-foreground border rounded-t-2xl">
+                      <div className="flex items-center gap-2">
+                        <UserIcon className="size-4" />
+                        <p>Please log in to start chatting</p>
+                      </div>
+                      <Button
+                        variant="link"
+                        className="h-6 underline font-normal cursor-pointer px-0 text-xs flex items-center gap-1"
+                        onClick={() => {
+                          // You can customize this action - redirect to login page or trigger sign-in modal
+                          window.location.href = "/auth/signin";
+                        }}
+                      >
+                        <LogInIcon className="size-3" />
+                        Sign In
+                      </Button>
+                    </div>
+                  )
+                )
                 .with(
                   {
                     remainingCredits: P.number.lte(0),
                     isPro: false,
                     editingMessageId: P.nullish,
+                    isUnauthenticated: false,
                   },
                   () => (
                     <div className="flex justify-between items-center px-3 py-3 bg-sidebar/30 backdrop-blur-md text-xs text-muted-foreground  border rounded-t-2xl">
@@ -582,6 +634,7 @@ export default function ChatInterface({
                     remainingCredits: P.number.lt(18),
                     isPro: false,
                     editingMessageId: P.nullish,
+                    isUnauthenticated: false,
                   },
                   () => (
                     <div className="flex justify-between items-center px-3 py-3 bg-muted/30  w-full border-foreground/10 backdrop-blur-md text-xs text-muted-foreground border-b rounded-t-3xl">
@@ -607,6 +660,7 @@ export default function ChatInterface({
                     remainingCredits: P.number.lte(0),
                     isPro: true,
                     editingMessageId: P.nullish,
+                    isUnauthenticated: false,
                   },
                   () => (
                     <div className="flex justify-between items-center px-3 py-3 bg-muted/30  w-full border-foreground/10 backdrop-blur-md text-xs text-muted-foreground border-b rounded-t-3xl">
@@ -623,6 +677,7 @@ export default function ChatInterface({
                     remainingCredits: P.number.lt(10),
                     isPro: true,
                     editingMessageId: P.nullish,
+                    isUnauthenticated: false,
                   },
                   () => (
                     <div className="flex justify-between items-center px-3 py-3 bg-muted/30  w-full border-foreground/10 backdrop-blur-md text-xs text-muted-foreground border-b rounded-t-3xl">
@@ -674,8 +729,12 @@ export default function ChatInterface({
                 <PromptInputTextarea
                   onChange={(e) => setText(e.target.value)}
                   value={text}
-                  placeholder="Ask me anything..."
-                  disabled={isLoading}
+                  placeholder={
+                    isUnauthenticated
+                      ? "Please log in to start chatting..."
+                      : "Ask me anything..."
+                  }
+                  disabled={isLoading || isUnauthenticated}
                   className="min-h-[44px] sm:min-h-[52px] text-sm sm:text-base resize-none"
                 />
 
@@ -686,14 +745,16 @@ export default function ChatInterface({
                         variant="ghost"
                         size="icon"
                         type="button"
+                        disabled={isUnauthenticated}
                         className={cn(
                           "h-8 w-8 rounded-full relative z-10 hover:text-primary",
-                          tool === "" && "text-primary"
+                          tool === "" && "text-primary",
+                          isUnauthenticated && "opacity-50"
                         )}
                         onClick={() => setTool("")}
                       >
                         <MessageCircleIcon className="size-4 z-1" />
-                        {tool === "" && (
+                        {tool === "" && !isUnauthenticated && (
                           <motion.div
                             className="absolute inset-0 h-8 w-full rounded-full bg-background z-0"
                             layoutId="toolThumb"
@@ -709,6 +770,8 @@ export default function ChatInterface({
 
                     <PromptInputAction
                       tooltip={(() => {
+                        if (isUnauthenticated)
+                          return "Please log in to use tools";
                         if (!canModelUseTools)
                           return "This model cannot use tools";
                         if (remainingSearches <= 0)
@@ -721,13 +784,22 @@ export default function ChatInterface({
                         variant="ghost"
                         size="icon"
                         type="button"
-                        disabled={!canSearch || !canModelUseTools}
+                        disabled={
+                          !canSearch || !canModelUseTools || isUnauthenticated
+                        }
                         className={cn(
                           "h-8 w-8 rounded-full relative z-10 hover:text-primary",
                           tool === "search" && "text-primary",
-                          (!canSearch || !canModelUseTools) && "opacity-50"
+                          (!canSearch ||
+                            !canModelUseTools ||
+                            isUnauthenticated) &&
+                            "opacity-50"
                         )}
                         onClick={() => {
+                          if (isUnauthenticated) {
+                            toast.warning("Please log in to use tools");
+                            return;
+                          }
                           if (!canModelUseTools) {
                             toast.warning("This model cannot use tools");
                             return;
@@ -744,7 +816,7 @@ export default function ChatInterface({
                         }}
                       >
                         <GlobeIcon className="size-4 z-1" />
-                        {tool === "search" && (
+                        {tool === "search" && !isUnauthenticated && (
                           <motion.div
                             className="absolute inset-0 h-8 w-full rounded-full bg-background z-0"
                             layoutId="toolThumb"
@@ -760,6 +832,8 @@ export default function ChatInterface({
 
                     <PromptInputAction
                       tooltip={(() => {
+                        if (isUnauthenticated)
+                          return "Please log in to use tools";
                         if (!canModelUseTools)
                           return "This model cannot use tools";
                         if (!isPro)
@@ -774,13 +848,22 @@ export default function ChatInterface({
                         variant="ghost"
                         size="icon"
                         type="button"
-                        disabled={!canResearch || !canModelUseTools}
+                        disabled={
+                          !canResearch || !canModelUseTools || isUnauthenticated
+                        }
                         className={cn(
                           "h-8 w-16 rounded-full relative z-10 hover:text-primary",
                           tool === "research" && "text-primary",
-                          (!canResearch || !canModelUseTools) && "opacity-50"
+                          (!canResearch ||
+                            !canModelUseTools ||
+                            isUnauthenticated) &&
+                            "opacity-50"
                         )}
                         onClick={() => {
+                          if (isUnauthenticated) {
+                            toast.warning("Please log in to use tools");
+                            return;
+                          }
                           if (!canModelUseTools) {
                             toast.warning("This model cannot use tools");
                             return;
@@ -808,7 +891,7 @@ export default function ChatInterface({
                             BETA
                           </span>
                         </div>
-                        {tool === "research" && (
+                        {tool === "research" && !isUnauthenticated && (
                           <motion.div
                             className="absolute inset-0 h-8 w-full rounded-full bg-background z-0"
                             layoutId="toolThumb"
@@ -825,7 +908,11 @@ export default function ChatInterface({
 
                   <div className="ml-auto flex items-center gap-2">
                     <PromptInputAction
-                      tooltip={match({ canModelViewFiles })
+                      tooltip={match({ canModelViewFiles, isUnauthenticated })
+                        .with(
+                          { isUnauthenticated: true },
+                          () => "Please log in to upload files"
+                        )
                         .with({ canModelViewFiles: true }, () => "Attach files")
                         .with(
                           { canModelViewFiles: false },
@@ -838,7 +925,11 @@ export default function ChatInterface({
                         multiple={true}
                         onFileSelect={handleFileUpload}
                         onUploadComplete={handleUploadThingComplete}
-                        className="h-8 w-8 rounded-full"
+                        className={cn(
+                          "h-8 w-8 rounded-full",
+                          (isUnauthenticated || !canModelViewFiles) &&
+                            "opacity-50"
+                        )}
                       />
                     </PromptInputAction>
 
@@ -846,6 +937,7 @@ export default function ChatInterface({
                       disabled={
                         !text.trim() ||
                         isLoading ||
+                        isUnauthenticated ||
                         (!isPro && (remainingCredits ?? 0) <= 0)
                       }
                       status={getSubmitStatus()}

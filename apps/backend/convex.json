@@ -1,0 +1,10 @@
+{
+  "node": {
+    "externalPackages": [
+      "@ai-sdk/google",
+      "@ai-sdk/groq",
+      "@ai-sdk/openai-compatible",
+      "@openrouter/ai-sdk-provider"
+    ]
+  }
+}

@@ -24,6 +24,7 @@ import { SearchTool } from "./search-tool";
 import { Part } from "./part";
 import { SourcesButton } from "../sources-button";
 import { ResearchButton } from "../research-button";
+import { UrlResultButton } from "../url-result-button";
 
 interface AIMessageProps {
   message: any;
@@ -60,7 +61,27 @@ export const AIMessage = memo(function AIMessage({
     }
   };
 
-  if (!message.content && !message.thinking) {
+  const isLoading =
+    !message.isComplete &&
+    !message.content &&
+    !message.thinking &&
+    !message.toolCalls?.length;
+  const hasThinking =
+    message.thinking &&
+    typeof message.thinking === "string" &&
+    message.thinking.trim().length > 0;
+
+  const isReasoningStreaming = hasThinking && !message.isComplete;
+  const reasoningDuration = message.thinkingDuration || 0;
+
+  // Extract URLs from search tool calls
+  const searchToolCalls =
+    message.toolCalls?.filter((tc: any) => tc.toolName === "webSearch") || [];
+  const searchResults =
+    searchToolCalls.length > 0 ? searchToolCalls[0]?.result || [] : [];
+  const urls = searchResults.map((result: any) => result.url).filter(Boolean);
+
+  if (isLoading) {
     return (
       <Message from="assistant" key={message._id} data-message-id={message._id}>
         <MessageContent
@@ -86,24 +107,29 @@ export const AIMessage = memo(function AIMessage({
         )}
       >
         <div className="space-y-2 sm:space-y-3">
-          {message.thinking && (
-            <Reasoning>
-              <ReasoningTrigger />
-              <ReasoningContent>{message.thinking}</ReasoningContent>
-            </Reasoning>
+          {/* Sources button at the top */}
+          {message.toolCalls && message.toolCalls.length > 0 && (
+            <div className="space-y-2">
+              <SourcesButton toolCalls={message.toolCalls} />
+              <ResearchButton toolCalls={message.toolCalls} />
+            </div>
+          )}
+
+          {hasThinking && (
+            <div className="reasoning-container">
+              <Reasoning
+                isStreaming={isReasoningStreaming}
+                duration={reasoningDuration}
+              >
+                <ReasoningTrigger />
+                <ReasoningContent className="whitespace-pre-wrap text-muted-foreground">
+                  {message.thinking}
+                </ReasoningContent>
+              </Reasoning>
+            </div>
           )}
 
           {message.content && <Markdown animated>{message.content}</Markdown>}
-
-          {/* Tool Buttons - only show when message is complete and has tool calls */}
-          {message.isComplete &&
-            message.toolCalls &&
-            message.toolCalls.length > 0 && (
-              <div className="space-y-2">
-                <SourcesButton toolCalls={message.toolCalls} />
-                <ResearchButton toolCalls={message.toolCalls} />
-              </div>
-            )}
 
           {message.attachments && message.attachments.length > 0 && (
             <div className="space-y-2">
@@ -116,6 +142,20 @@ export const AIMessage = memo(function AIMessage({
                   onClick={() => window.open(attachment.url, "_blank")}
                 />
               ))}
+            </div>
+          )}
+
+          {/* URL results at the bottom */}
+          {urls.length > 0 && (
+            <div className="mt-4">
+              <UrlResultButton
+                urls={urls}
+                count={urls.length}
+                label={urls.length === 1 ? "source" : "sources"}
+                onClick={() => {
+                  // You can add click handler here if needed
+                }}
+              />
             </div>
           )}
         </div>

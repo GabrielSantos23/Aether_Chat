@@ -72,6 +72,10 @@ export function UserButton({
       </Button>
     );
   }
+  const handleSignIn = () => {
+    if (onSignIn) return onSignIn();
+    navigate("/auth");
+  };
 
   const normalizeUser = (): NormalizedUser | null => {
     if (user) {
@@ -106,17 +110,17 @@ export function UserButton({
 
   const currentUser = normalizeUser();
 
-  if (!currentUser) {
-    const handleSignIn = () => {
-      if (onSignIn) return onSignIn();
-      navigate("/login");
-    };
-    return (
-      <Button variant="outline" onClick={handleSignIn} className={className}>
-        Sign In
-      </Button>
-    );
-  }
+  // if (!currentUser) {
+  //   const handleSignIn = () => {
+  //     if (onSignIn) return onSignIn();
+  //     navigate("/login");
+  //   };
+  //   return (
+  //     <Button variant="outline" onClick={handleSignIn} className={className}>
+  //       Sign In
+  //     </Button>
+  //   );
+  // }
 
   return (
     <Popover>
@@ -129,7 +133,7 @@ export function UserButton({
             className
           )}
         >
-          {currentUser.image ? (
+          {currentUser?.image ? (
             <img
               src={currentUser.image}
               alt={currentUser.name || currentUser.email || "User"}
@@ -137,8 +141,8 @@ export function UserButton({
             />
           ) : (
             <div className="h-full w-full bg-muted flex items-center justify-center text-muted-foreground text-sm font-medium rounded-none">
-              {currentUser.name?.[0] ||
-                currentUser.email?.[0]?.toUpperCase() ||
+              {currentUser?.name?.[0] ||
+                currentUser?.email?.[0]?.toUpperCase() ||
                 "U"}
             </div>
           )}
@@ -151,7 +155,9 @@ export function UserButton({
       >
         <div className="p-3 border-b border-foreground/10">
           <div className="flex flex-col overflow-hidden">
-            <div className="text-sm truncate">{currentUser.name || "User"}</div>
+            <div className="text-sm truncate">
+              {currentUser?.name || "User"}
+            </div>
             <div className="text-xs text-muted-foreground truncate">
               {isPro ? "Pro" : "Free"}
             </div>
@@ -236,10 +242,10 @@ export function UserButton({
           <Button
             variant="ghost"
             className="w-full justify-start text-muted-foreground hover:text-primary hover:bg-accent"
-            onClick={handleSignOut}
+            onClick={currentUser?.name ? handleSignOut : handleSignIn}
           >
             <LogOut className="h-4 w-4 mr-2" />
-            Log out
+            {currentUser?.name ? "Log out" : "Sign in"}
           </Button>
         </div>
       </PopoverContent>

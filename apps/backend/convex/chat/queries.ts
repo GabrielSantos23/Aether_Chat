@@ -326,6 +326,9 @@ export const getUserAIImages = query({
       identity.tokenIdentifier,
       identity.email
     );
+    if (!userId) {
+      return [];
+    }
     const images = await ctx.db
       .query("aiImages")
       .withIndex("by_user", (q) => q.eq("userId", userId))

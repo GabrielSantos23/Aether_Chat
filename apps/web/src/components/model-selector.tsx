@@ -14,7 +14,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import { ChevronsUpDown, Pin, PinOff } from "lucide-react";
+import { ChevronsUpDown, Pin, PinOff, LockIcon, LogInIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
   models as sharedModels,
@@ -58,6 +58,7 @@ export default function ModelSelector() {
     isModelEnabled,
   } = useModel();
   const isPending = status === "loading";
+  const isUnauthenticated = status === "unauthenticated" || !session?.user;
 
   const [open, setOpen] = useState<boolean>(false);
   const [showAll, setShowAll] = useState<boolean>(false);
@@ -78,7 +79,8 @@ export default function ModelSelector() {
 
   useEffect(() => {}, [selectedModelId, selectedModel]);
 
-  const availableModels = enabledModelsList;
+  // For unauthenticated users, show all available models but make them non-selectable
+  const availableModels = isUnauthenticated ? sharedModels : enabledModelsList;
   const pinnedModels = availableModels.filter((model) =>
     pinnedModelIds.includes(model.id)
   );
@@ -94,6 +96,11 @@ export default function ModelSelector() {
   }, [open]);
 
   const handleSelectModel = async (model: Model) => {
+    if (isUnauthenticated) {
+      toast.error("Please sign in to select a model");
+      return;
+    }
+
     if (!isModelEnabled(model.id)) {
       toast.error(
         `${model.name} is currently disabled. Enable it in account settings.`
@@ -118,6 +125,11 @@ export default function ModelSelector() {
   };
 
   const handleTogglePin = async (modelId: string, shouldPin: boolean) => {
+    if (isUnauthenticated) {
+      toast.error("Please sign in to pin models");
+      return;
+    }
+
     if (!user) return;
 
     const current = pinnedModelIds;
@@ -161,20 +173,7 @@ export default function ModelSelector() {
     );
   }
 
-  if (!user) {
-    return (
-      <div className="w-full max-w-md mx-auto p-4">
-        <Button variant="ghost" disabled>
-          <div className="flex items-center gap-2 flex-1">
-            <span className="truncate">Sign in to select models</span>
-          </div>
-          <ChevronsUpDown className="opacity-50" />
-        </Button>
-      </div>
-    );
-  }
-
-  if (availableModels.length === 0) {
+  if (availableModels.length === 0 && !isUnauthenticated) {
     return (
       <div className="w-full max-w-md mx-auto p-4">
         <Button variant="ghost" disabled>
@@ -192,20 +191,31 @@ export default function ModelSelector() {
       <Popover open={open} onOpenChange={setOpen}>
         <PopoverTrigger asChild>
           <Button variant="ghost" aria-expanded={open} key={selectedModelId}>
-            <div className="flex items-center gap-2 flex-1">
-              {selectedModel && (
-                <ModelIcon
-                  className="fill-primary"
-                  model={selectedModel.icon}
-                />
-              )}
-              <span className="truncate hidden md:block">
-                {selectedModel?.name || "Select Model"}
-              </span>
-              {selectedModel?.access === "premium_required" && (
-                <span className="text-[10px] font-medium text-primary px-2 py-0.5 rounded-full z-1 bg-primary/10">
-                  PRO
-                </span>
+            <div className="flex items-center gap-2 flex-1 group">
+              {isUnauthenticated ? (
+                <>
+                  <LockIcon className="size-4 opacity-50" />
+                  <span className="truncate text-muted-foreground group-hover:text-foreground transition-colors duration-200">
+                    Models
+                  </span>
+                </>
+              ) : (
+                <>
+                  {selectedModel && (
+                    <ModelIcon
+                      className="fill-primary"
+                      model={selectedModel.icon}
+                    />
+                  )}
+                  <span className="truncate hidden md:block">
+                    {selectedModel?.name || "Select Model"}
+                  </span>
+                  {selectedModel?.access === "premium_required" && (
+                    <span className="text-[10px] font-medium text-primary px-2 py-0.5 rounded-full z-1 bg-primary/10">
+                      PRO
+                    </span>
+                  )}
+                </>
               )}
             </div>
             <ChevronsUpDown className="opacity-50" />
@@ -215,6 +225,24 @@ export default function ModelSelector() {
           className={cn("p-0 relative min-w-[350px]")}
           align="start"
         >
+          {isUnauthenticated && (
+            <div className="flex items-center gap-2 px-3 py-2 bg-muted/30 border-b text-xs text-muted-foreground">
+              <LockIcon className="size-3" />
+              <span className="flex-1">Sign in to select and use models</span>
+              <Button
+                variant="link"
+                size="sm"
+                className="h-auto p-0 text-xs underline"
+                onClick={() => {
+                  // Customize this action - redirect to login page or trigger sign-in modal
+                  window.location.href = "/auth/signin";
+                }}
+              >
+                <LogInIcon className="size-3 mr-1" />
+                Sign In
+              </Button>
+            </div>
+          )}
           <Command>
             <CommandInput placeholder="Find Model..." className="h-9" />
             <CommandList className={cn(showAll && "max-h-[500px]")}>
@@ -229,8 +257,13 @@ export default function ModelSelector() {
                       onMouseEnter={() => setHoveredModel(model)}
                       onSelect={() => handleSelectModel(model)}
                       onClick={() => handleSelectModel(model)}
-                      className="cursor-pointer"
-                      disabled={model.access === "premium_required"}
+                      className={cn(
+                        "cursor-pointer",
+                        isUnauthenticated && "opacity-60"
+                      )}
+                      disabled={
+                        isUnauthenticated || model.access === "premium_required"
+                      }
                     >
                       <span className="flex items-center gap-2 flex-1">
                         {model.icon && (
@@ -244,6 +277,9 @@ export default function ModelSelector() {
                           <span className="text-[10px] font-medium text-primary px-2 py-0.5 rounded-full z-1 bg-primary/10">
                             PRO
                           </span>
+                        )}
+                        {isUnauthenticated && (
+                          <LockIcon className="size-3 opacity-40" />
                         )}
                       </span>
                       <CapabilityBadges
@@ -264,8 +300,14 @@ export default function ModelSelector() {
                         onMouseEnter={() => setHoveredModel(model)}
                         onSelect={() => handleSelectModel(model)}
                         onClick={() => handleSelectModel(model)}
-                        className="cursor-pointer"
-                        disabled={model.access === "premium_required"}
+                        className={cn(
+                          "cursor-pointer",
+                          isUnauthenticated && "opacity-60"
+                        )}
+                        disabled={
+                          isUnauthenticated ||
+                          model.access === "premium_required"
+                        }
                       >
                         <span className="flex items-center gap-2 flex-1">
                           {model.icon && (
@@ -280,24 +322,29 @@ export default function ModelSelector() {
                               PRO
                             </span>
                           )}
+                          {isUnauthenticated && (
+                            <LockIcon className="size-3 opacity-40" />
+                          )}
                         </span>
                         <CapabilityBadges
                           capabilities={model.capabilities ?? []}
                         />
-                        <div className="flex items-center gap-2">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="size-5"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleTogglePin(model.id, false);
-                            }}
-                            aria-label="Unpin model"
-                          >
-                            <PinOff className="opacity-70 size-3" />
-                          </Button>
-                        </div>
+                        {!isUnauthenticated && (
+                          <div className="flex items-center gap-2">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="size-5"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleTogglePin(model.id, false);
+                              }}
+                              aria-label="Unpin model"
+                            >
+                              <PinOff className="opacity-70 size-3" />
+                            </Button>
+                          </div>
+                        )}
                       </CommandItem>
                     ))}
                   </CommandGroup>
@@ -310,8 +357,14 @@ export default function ModelSelector() {
                         onMouseEnter={() => setHoveredModel(model)}
                         onSelect={() => handleSelectModel(model)}
                         onClick={() => handleSelectModel(model)}
-                        className="cursor-pointer"
-                        disabled={model.access === "premium_required"}
+                        className={cn(
+                          "cursor-pointer",
+                          isUnauthenticated && "opacity-60"
+                        )}
+                        disabled={
+                          isUnauthenticated ||
+                          model.access === "premium_required"
+                        }
                       >
                         <span className="flex items-center gap-2 flex-1">
                           {model.icon && (
@@ -326,24 +379,29 @@ export default function ModelSelector() {
                               PRO
                             </span>
                           )}
+                          {isUnauthenticated && (
+                            <LockIcon className="size-3 opacity-40" />
+                          )}
                         </span>
                         <CapabilityBadges
                           capabilities={model.capabilities ?? []}
                         />
-                        <div className="flex items-center gap-2">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="size-5"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleTogglePin(model.id, true);
-                            }}
-                            aria-label="Pin model"
-                          >
-                            <Pin className="opacity-70 size-3" />
-                          </Button>
-                        </div>
+                        {!isUnauthenticated && (
+                          <div className="flex items-center gap-2">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="size-5"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleTogglePin(model.id, true);
+                              }}
+                              aria-label="Pin model"
+                            >
+                              <Pin className="opacity-70 size-3" />
+                            </Button>
+                          </div>
+                        )}
                       </CommandItem>
                     ))}
                   </CommandGroup>
@@ -372,6 +430,9 @@ export default function ModelSelector() {
                     model={hoveredModel.icon}
                   />
                   <span className="text-sm">{hoveredModel.name}</span>
+                  {isUnauthenticated && (
+                    <LockIcon className="size-3 opacity-40" />
+                  )}
                 </div>
                 <div className="flex items-center gap-2 px-2">
                   <CapabilityBadges capabilities={hoveredModel.capabilities} />
@@ -389,6 +450,11 @@ export default function ModelSelector() {
                     /message
                   </div>
                 </div>
+                {isUnauthenticated && (
+                  <div className="px-2 pb-2 text-xs text-muted-foreground border-t border-foreground/10 pt-2">
+                    Sign in to use this model
+                  </div>
+                )}
               </div>
             )}
           </div>

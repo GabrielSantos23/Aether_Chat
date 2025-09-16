@@ -95,23 +95,28 @@ export default function AccountDashboard() {
 
   return (
     <div className="flex flex-col gap-y-10">
+      <title>Account | Aether</title>
+
       {!session ? (
         <AccountCard
           title="Anonymous"
+          className=""
           description="As an anonymous user, your data may be deleted or lost at any time. Login to keep your data safe."
         >
-          <div className="p-4 flex flex-col gap-2">
-            <h3>Not logged in</h3>
-            <p>
-              You are currently an anonymous user. Your chats, messages and
-              preferences may be deleted in the future. To save your data,
-              create an account or login.
-            </p>
-          </div>
-          <div className="flex px-4 py-3 bg-sidebar w-full justify-end border-t">
-            <Button variant="default" size="sm" asChild>
-              <Link to="/login">Login</Link>
-            </Button>
+          <div className="rounded-xl border bg-card">
+            <div className="p-4 flex flex-col gap-2 ">
+              <h3>Not logged in</h3>
+              <p>
+                You are currently an anonymous user. Your chats, messages and
+                preferences may be deleted in the future. To save your data,
+                create an account or login.
+              </p>
+            </div>
+            <div className="flex px-4 py-3 bg-sidebar w-full justify-end border-t rounded-b-xl">
+              <Button variant="default" size="sm" asChild>
+                <Link to="/login">Login</Link>
+              </Button>
+            </div>
           </div>
         </AccountCard>
       ) : null}

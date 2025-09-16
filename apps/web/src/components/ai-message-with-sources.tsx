@@ -20,10 +20,8 @@ export function AIMessageWithSources({
 }: AIMessageWithSourcesProps) {
   return (
     <div className="space-y-3">
-      {/* AI Response Content */}
       <div className="prose prose-sm max-w-none">{content}</div>
 
-      {/* Sources Button - only show when complete and has search results */}
       {isComplete && toolCalls && toolCalls.length > 0 && (
         <SourcesButton toolCalls={toolCalls} />
       )}

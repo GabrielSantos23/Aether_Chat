@@ -4,7 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
-import { useTheme } from "next-themes";
+import { useTheme } from "@/hooks/use-theme";
 import {
   Brain,
   Mail,
@@ -24,6 +24,7 @@ import { z } from "zod";
 import { AuthButtons } from "../../auth/auth-buttons";
 import { FcGoogle } from "react-icons/fc";
 import { CircularLoader } from "@/components/ui/loader";
+import { MagicLink } from "../components/Magic-Link";
 const emailSchema = z.object({
   email: z.string().email("Please enter a valid email address"),
 });
@@ -31,7 +32,7 @@ const emailSchema = z.object({
 type EmailFormData = z.infer<typeof emailSchema>;
 
 const LoginPage = () => {
-  const { theme } = useTheme();
+  const { currentTheme, currentMode, isLoading: themeLoading } = useTheme();
   const { data: session, status } = useSession();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -122,7 +123,7 @@ const LoginPage = () => {
     }
   };
 
-  if (status === "loading") {
+  if (status === "loading" || themeLoading) {
     return (
       <div className="flex items-center justify-center h-screen">
         <Loader2 className="h-8 w-8 animate-spin" />
@@ -133,6 +134,10 @@ const LoginPage = () => {
   if (session) {
     navigate("/chat");
     return null;
+  }
+
+  if (emailSent) {
+    return <MagicLink />;
   }
 
   const providers = [
@@ -212,22 +217,6 @@ const LoginPage = () => {
                 </Button>
               </div>
             </form>
-
-            {emailSent && (
-              <div className="w-full">
-                <Button
-                  variant="outline"
-                  onClick={() => {
-                    setEmailSent(false);
-                    setSuccess(null);
-                  }}
-                  className="w-full"
-                  disabled={socialLoading !== null}
-                >
-                  Send Another Link
-                </Button>
-              </div>
-            )}
 
             <div className="flex flex-row items-center gap-4 w-full">
               <Separator className="flex-1" />

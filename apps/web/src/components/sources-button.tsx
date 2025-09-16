@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { SearchIcon, ExternalLink } from "lucide-react";
+import { SearchIcon, ExternalLink, Loader2Icon } from "lucide-react";
 import { motion } from "framer-motion";
 import { useSidebar } from "@/contexts/sidebar-context";
 
@@ -27,14 +27,12 @@ export function SourcesButton({ toolCalls }: SourcesButtonProps) {
   }
 
   const searchCall = searchToolCalls[0];
-  const searchResults = searchCall?.result || [];
-  const query = searchCall?.args?.query || "Search results";
-
-  if (!searchResults || searchResults.length === 0) {
-    return null;
-  }
+  const isDone = searchCall?.result !== undefined;
+  const searchResults = (isDone && (searchCall?.result || [])) || [];
+  const query = searchCall?.args?.query || "Search";
 
   const handleClick = () => {
+    // Always open to show progress and (eventually) results
     openSearchSidebar(searchResults, query);
   };
 
@@ -54,15 +52,16 @@ export function SourcesButton({ toolCalls }: SourcesButtonProps) {
         className="flex items-center gap-2 text-xs hover:bg-muted transition-colors"
       >
         <SearchIcon className="w-3 h-3" />
-        <span>
-          View {searchResults.length} source
-          {searchResults.length !== 1 ? "s" : ""}
-        </span>
-        <ExternalLink
-          className={`w-3 h-3 transition-transform ${
-            isHovered ? "translate-x-0.5 -translate-y-0.5" : ""
-          }`}
-        />
+        <span>{isDone ? query : "Searching"}</span>
+        {!isDone ? (
+          <Loader2Icon className="w-3 h-3 animate-spin" />
+        ) : (
+          <ExternalLink
+            className={`w-3 h-3 transition-transform ${
+              isHovered ? "translate-x-0.5 -translate-y-0.5" : ""
+            }`}
+          />
+        )}
       </Button>
     </motion.div>
   );

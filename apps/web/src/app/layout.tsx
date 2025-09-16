@@ -15,8 +15,9 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "aether-ai-2",
-  description: "aether-ai-2",
+  title: "Aether AI",
+  description:
+    "Aether AI - Your AI Assistant for Search,Research and Development",
 };
 
 export default function RootLayout({
@@ -30,7 +31,7 @@ export default function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
         <Providers>
-          <div className="grid grid-rows-[auto_1fr] h-svh">{children}</div>
+          <div className="grid grid-rows-[auto_1fr] h-svh ">{children}</div>
         </Providers>
       </body>
     </html>

@@ -24,12 +24,10 @@ export const SearchPart = memo(function PureSearchPart({
   onToggleSidebar,
   isSidebarOpen = false,
 }: SearchPartProps) {
-  // If search is done and we have results, show the SearchTool component
   if (done && toolCall?.result) {
     return <SearchTool toolCall={toolCall} />;
   }
 
-  // Otherwise show the loading/searching state
   return (
     <div className={cn("w-full", !done && "animate-pulse")}>
       <button

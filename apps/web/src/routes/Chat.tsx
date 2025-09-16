@@ -15,6 +15,7 @@ export default function Chat() {
 
   return (
     <ModelProvider>
+      <title>Aether AI | Chat</title>
       <SidebarProvider>
         <AppSidebar />
         <SidebarInset>
