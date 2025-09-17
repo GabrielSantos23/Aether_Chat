@@ -234,8 +234,7 @@ export default function ModelSelector() {
                 size="sm"
                 className="h-auto p-0 text-xs underline"
                 onClick={() => {
-                  // Customize this action - redirect to login page or trigger sign-in modal
-                  window.location.href = "/auth/signin";
+                  window.location.href = "/auth";
                 }}
               >
                 <LogInIcon className="size-3 mr-1" />

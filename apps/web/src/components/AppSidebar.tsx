@@ -11,7 +11,6 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from "./ui/sidebar";
-import ZeronIcon from "./icons/zeron";
 import { Loader2Icon, PencilIcon, PlusIcon, TrashIcon } from "lucide-react";
 import { Fragment, useState, useEffect } from "react";
 import {
@@ -33,6 +32,7 @@ import {
 } from "./ui/dialog";
 import { Label } from "./ui/label";
 import { Input } from "./ui/input";
+import AetheriaIcon from "./icons/Aether";
 
 type Chat = {
   _id: Id<"chats">;
@@ -72,7 +72,7 @@ function AppSidebarHeader() {
     <SidebarHeader className="p-3">
       <Button variant="ghost" size="icon" asChild>
         <Link to="/">
-          <ZeronIcon className="size-6" />
+          <AetheriaIcon className="size-15" />
         </Link>
       </Button>
     </SidebarHeader>
@@ -95,12 +95,13 @@ function AppSidebarActions() {
     <SidebarGroup>
       <SidebarGroupContent>
         <SidebarMenu>
-          <SidebarMenuItem>
-            <SidebarMenuButton onClick={handleNewChat}>
-              <PlusIcon />
-              <span className="flex-1">New Chat</span>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
+          <Link
+            to="/chat"
+            className="flex items-center gap-x-3 hover:bg-accent px-2 py-2 text-muted-foreground hover:text-foreground rounded-md transition-all duration-150 "
+          >
+            <PlusIcon className="size-5" />
+            <span className="flex-1">New Chat</span>
+          </Link>
         </SidebarMenu>
       </SidebarGroupContent>
     </SidebarGroup>

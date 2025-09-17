@@ -320,7 +320,7 @@ export const sendMessage = action({
           assistantMessageId,
           {
             webSearch: webSearch || false,
-            imageGeneration: false,
+            imageGeneration: imageGen || false,
             research: research || false,
           }
         );
@@ -371,8 +371,24 @@ export const generateTitle = action({
     chatId: v.id("chats"),
     messageContent: v.string(),
     modelId: v.string(),
+    retryCount: v.optional(v.number()),
   },
-  handler: async (ctx, { chatId, messageContent, modelId }) => {
+  handler: async (ctx, { chatId, messageContent, modelId, retryCount }) => {
+    // Heuristic fallback title from the first user message
+    const heuristicTitle = () => {
+      const words = messageContent
+        .replace(/[\n\r]+/g, " ")
+        .replace(/[`*_#>\[\](){}~]/g, "")
+        .trim()
+        .split(/\s+/)
+        .slice(0, 6);
+      const raw = words.join(" ").trim();
+      if (!raw) return "New chat";
+      return raw.charAt(0).toUpperCase() + raw.slice(1);
+    };
+
+    const attempt = (retryCount ?? 0) + 1;
+
     try {
       const envApiKey = process.env.GEMINI_API_KEY || "";
 
@@ -380,37 +396,62 @@ export const generateTitle = action({
         console.error("No Gemini API key available for title generation");
         await ctx.runMutation(api.chat.mutations.updateChatTitle, {
           chatId,
-          title: "New chat",
+          title: heuristicTitle(),
         });
         return;
       }
 
       const google = createGoogleGenerativeAI({ apiKey: envApiKey });
-      const aiModel = google("gemini-2.0-flash-lite");
+      // Prefer the requested model but default to fast one
+      const modelToUse =
+        modelId && modelId.startsWith("gemini")
+          ? modelId
+          : "gemini-2.0-flash-lite";
+      const aiModel = google(modelToUse as any);
 
-      let titlePrompt = `Based on the following user message, generate a short, concise title for the chat (4-5 words max) No Markdown Allowed:\n\nUser: "${messageContent}"\n\nTitle:`;
+      const titlePrompt = `Based on the following user message, generate a short, concise title for the chat (4-5 words max). No Markdown, no quotes.\n\nUser: "${messageContent}"\n\nTitle:`;
 
       const { text } = await generateText({
         model: aiModel,
         prompt: titlePrompt,
       });
 
-      let finalTitle = text || "New chat";
-
-      finalTitle = finalTitle.replace(/"/g, "").trim();
+      let finalTitle = (text || "").replace(/"/g, "").trim();
       if (!finalTitle || finalTitle.length < 2) {
-        finalTitle = "New chat";
+        finalTitle = heuristicTitle();
       }
 
       await ctx.runMutation(api.chat.mutations.updateChatTitle, {
         chatId,
         title: finalTitle,
       });
-    } catch (error) {
-      console.error("Error generating title:", error);
+    } catch (error: any) {
+      const message = String(
+        error?.message || error?.data?.error?.message || "Unknown error"
+      );
+      const status = (error?.statusCode as number | undefined) ?? undefined;
+      const isOverloaded =
+        message.includes("overloaded") ||
+        message.includes("UNAVAILABLE") ||
+        status === 503 ||
+        Boolean(error?.isRetryable);
+
+      // Exponential backoff via scheduler, keep isGeneratingTitle=true until success or final fallback
+      if (isOverloaded && attempt < 5) {
+        const delayMs = Math.min(30000, 2000 * Math.pow(2, attempt - 1));
+        await ctx.scheduler.runAfter(delayMs, api.chat.actions.generateTitle, {
+          chatId,
+          messageContent,
+          modelId,
+          retryCount: attempt,
+        });
+        return;
+      }
+
+      // Final fallback: set a deterministic title and clear generating flag
       await ctx.runMutation(api.chat.mutations.updateChatTitle, {
         chatId,
-        title: "New chat",
+        title: heuristicTitle(),
       });
     }
   },

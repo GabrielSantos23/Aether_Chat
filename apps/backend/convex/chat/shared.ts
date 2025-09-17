@@ -1,4 +1,11 @@
-import { streamText, tool, type CoreMessage, stepCountIs } from "ai";
+import {
+  streamText,
+  tool,
+  type CoreMessage,
+  stepCountIs,
+  experimental_generateImage as generateImage,
+  smoothStream,
+} from "ai";
 import { z } from "zod";
 import { tavily } from "../../../web/src/components/tavily/core";
 
@@ -6,12 +13,12 @@ import { createGoogleGenerativeAI } from "@ai-sdk/google";
 import { createOpenRouter } from "@openrouter/ai-sdk-provider";
 import { createGroq } from "@ai-sdk/groq";
 import { createOpenAICompatible } from "@ai-sdk/openai-compatible";
+import { openai } from "@ai-sdk/openai";
 
 import { api } from "../_generated/api";
 import { Id } from "../_generated/dataModel";
 import { models } from "../../../web/src/lib/models";
 import { getPrompt } from "../../../web/src/components/prompts/base";
-import { generateImage } from "./node";
 
 interface ToolConfig {
   webSearch?: boolean;
@@ -86,9 +93,10 @@ export const advancedWebSearchTool = tool({
   },
 });
 
+// Updated image generation tool using the official AI SDK
 export const imageGenerationTool = tool({
   description:
-    "Generate high-quality images based on detailed text descriptions",
+    "Generate high-quality images based on detailed text descriptions using AI models",
   inputSchema: z.object({
     prompt: z
       .string()
@@ -98,31 +106,157 @@ export const imageGenerationTool = tool({
     style: z
       .enum(["realistic", "artistic", "cartoon", "abstract"])
       .optional()
-      .describe("Visual style for the generated image"),
+      .describe("Visual style for the generated image (default: realistic)"),
     quality: z
-      .enum(["standard", "high"])
+      .enum(["standard", "hd"])
       .optional()
-      .describe("Image quality setting"),
+      .describe("Image quality setting (default: hd)"),
+    size: z
+      .enum(["1024x1024", "1792x1024", "1024x1792"])
+      .optional()
+      .describe("Image size (default: 1024x1024)"),
+    n: z
+      .number()
+      .min(1)
+      .max(4)
+      .optional()
+      .describe("Number of images to generate (default: 1)"),
   }),
-  execute: async ({ prompt, style = "realistic", quality = "high" }) => {
+  execute: async ({
+    prompt,
+    style = "realistic",
+    quality = "hd",
+    size = "1024x1024",
+    n = 1,
+  }) => {
     try {
-      const imageUrl = await generateImage(
-        null,
-        `${prompt} in ${style} style`,
-        process.env.GEMINI_API_KEY || ""
-      );
+      // Enhance prompt with style
+      const enhancedPrompt =
+        style !== "realistic" ? `${prompt} in ${style} style` : prompt;
 
-      return {
-        success: true,
-        imageUrl,
-        prompt,
-        style,
-        quality,
-      };
+      const result: any = await generateImage({
+        model: openai.image("dall-e-3"), // Use OpenAI DALL-E 3 as default
+        prompt: enhancedPrompt,
+        size: size as "1024x1024" | "1792x1024" | "1024x1792",
+        n: n,
+        providerOptions: {
+          openai: {
+            quality: quality,
+            style: style === "realistic" ? "natural" : "vivid",
+          },
+        },
+      });
+
+      // Handle single or multiple images
+      if ("image" in result) {
+        return {
+          success: true,
+          images: [
+            {
+              base64: result.image.base64,
+              url: `data:image/png;base64,${result.image.base64}`,
+            },
+          ],
+          prompt: enhancedPrompt,
+          style,
+          quality,
+          size,
+          count: 1,
+        };
+      } else if ("images" in result) {
+        return {
+          success: true,
+          images: result.images.map((img: any) => ({
+            base64: img.base64,
+            url: `data:image/png;base64,${img.base64}`,
+          })),
+          prompt: enhancedPrompt,
+          style,
+          quality,
+          size,
+          count: result.images.length,
+        };
+      }
+
+      throw new Error("No images generated");
     } catch (error) {
       console.error("❌ Image generation failed:", error);
       return {
+        success: false,
         error: "Failed to generate image",
+        message: (error as Error).message,
+        prompt,
+      };
+    }
+  },
+});
+
+// Alternative tool for Google Vertex AI (Imagen)
+export const imagenGenerationTool = tool({
+  description:
+    "Generate images using Google's Imagen model with aspect ratio control",
+  inputSchema: z.object({
+    prompt: z
+      .string()
+      .min(10)
+      .max(500)
+      .describe("Detailed description of the image to generate"),
+    aspectRatio: z
+      .enum(["1:1", "16:9", "9:16", "4:3", "3:4"])
+      .optional()
+      .describe("Aspect ratio of the image (default: 1:1)"),
+    n: z
+      .number()
+      .min(1)
+      .max(4)
+      .optional()
+      .describe("Number of images to generate (default: 1)"),
+  }),
+  execute: async ({ prompt, aspectRatio = "1:1", n = 1 }) => {
+    try {
+      // You would need to set up Google Vertex AI provider
+      // const vertex = createGoogleVertexAI({ ... });
+
+      const result: any = await generateImage({
+        // model: vertex.image('imagen-3.0-generate-002'),
+        model: openai.image("dall-e-3"), // Fallback to OpenAI for now
+        prompt: prompt,
+        // aspectRatio: aspectRatio, // Only available with Imagen
+        n: n,
+      });
+
+      if ("image" in result) {
+        return {
+          success: true,
+          images: [
+            {
+              base64: result.image.base64,
+              url: `data:image/png;base64,${result.image.base64}`,
+            },
+          ],
+          prompt,
+          aspectRatio,
+          count: 1,
+        };
+      } else if ("images" in result) {
+        return {
+          success: true,
+          images: result.images.map((img: any) => ({
+            base64: img.base64,
+            url: `data:image/png;base64,${img.base64}`,
+          })),
+          prompt,
+          aspectRatio,
+          count: result.images.length,
+        };
+      }
+
+      throw new Error("No images generated");
+    } catch (error) {
+      console.error("❌ Imagen generation failed:", error);
+      return {
+        success: false,
+        error: "Failed to generate image with Imagen",
         message: (error as Error).message,
         prompt,
       };
@@ -136,12 +270,16 @@ const createToolRegistry = (config: ToolConfig, ctx: any) => {
 
   if (config.webSearch) {
     tools.webSearch = advancedWebSearchTool;
-    activeToolNames.push("webSearch");
+    activeToolNames.push("search");
   }
 
   if (config.imageGeneration) {
     tools.generateImage = imageGenerationTool;
-    activeToolNames.push("generateImage");
+    activeToolNames.push("image");
+  }
+
+  if (config.research) {
+    activeToolNames.push("research");
   }
 
   return { tools, activeToolNames };
@@ -152,12 +290,24 @@ const getModelConfig = (modelId: string): ModelConfig => {
 
   if (!model) {
     console.warn(`Model not found: ${modelId}, falling back to Gemini Flash`);
-    const fallbackModel = models.find(
-      (m) => m.id === "gemini-1.5-flash-latest"
-    );
+    const preferredFallbackIds = [
+      "gemini-2.5-flash",
+      "gemini-2.0-flash",
+      "google/gemini-flash-1.5",
+    ];
+    let fallbackModel = models.find((m) => preferredFallbackIds.includes(m.id));
+    if (!fallbackModel) {
+      fallbackModel = models.find((m) => m.provider === "gemini");
+    }
+    if (fallbackModel) {
+      return {
+        model: fallbackModel,
+        provider: fallbackModel.provider,
+      };
+    }
     return {
-      model: fallbackModel || models[0],
-      provider: fallbackModel?.provider || "gemini",
+      model: models[0],
+      provider: models[0]?.provider || "gemini",
     };
   }
 
@@ -178,6 +328,7 @@ const getActiveApiKey = async (ctx: any, service: string): Promise<string> => {
     groq: process.env.GROQ_API_KEY,
     openrouter: process.env.OPENROUTER_API_KEY,
     moonshot: process.env.MOONSHOT_KEY,
+    openai: process.env.OPENAI_API_KEY,
   };
 
   const envKey = envVarMap[service];
@@ -205,6 +356,12 @@ const initializeModel = async (ctx: any, provider: string, modelId: string) => {
         name: "moonshot",
         apiKey,
         baseURL: "https://api.moonshot.ai/v1",
+      })(modelId);
+    case "openai":
+      return createOpenAICompatible({
+        name: "openai",
+        apiKey,
+        baseURL: "https://api.openai.com/v1",
       })(modelId);
     default:
       console.warn(`Unknown provider: ${provider}. Falling back to Gemini`);
@@ -330,7 +487,8 @@ export const generateAIResponse = async (
     if (chatMessages.length === 1) {
       chatMessages.unshift({
         role: "system",
-        content: "You are a helpful AI assistant with access to various tools.",
+        content:
+          "You are a helpful AI assistant with access to various tools including web search and image generation.",
       });
     }
 
@@ -376,7 +534,6 @@ export const generateAIResponse = async (
       activeTools: activeToolNames as ("research" | "search" | "image")[],
     });
 
-    // Check if model supports reasoning
     const supportsReasoning = checkModelSupportsReasoning(modelId, provider);
 
     const result = streamText({
@@ -385,6 +542,10 @@ export const generateAIResponse = async (
       messages: chatMessages,
       tools: Object.keys(tools).length > 0 ? tools : undefined,
       stopWhen: stepCountIs(10),
+      experimental_transform: smoothStream({
+        delayInMs: 10,
+        chunking: "word",
+      }),
     });
 
     let accumulatedContent = "";
@@ -392,177 +553,102 @@ export const generateAIResponse = async (
     let accumulatedThinking = "";
     const thinkingStart = Date.now();
 
-    // Batch updates to reduce concurrency issues
-    let lastUpdateTime = 0;
-    const UPDATE_INTERVAL = 100; // Update every 100ms max
-    let pendingUpdate: any = null;
+    let updateQueue: any = {};
+    let updateTimeout: NodeJS.Timeout | null = null;
+    let isUpdating = false;
+    const UPDATE_DELAY = 16;
 
     const scheduleUpdate = async (updateData: any) => {
-      const now = Date.now();
-      if (now - lastUpdateTime < UPDATE_INTERVAL) {
-        // Merge with pending update
-        if (pendingUpdate) {
-          pendingUpdate = { ...pendingUpdate, ...updateData };
-        } else {
-          pendingUpdate = updateData;
+      updateQueue = { ...updateQueue, ...updateData };
+
+      if (updateTimeout) {
+        clearTimeout(updateTimeout);
+      }
+
+      const performUpdate = async () => {
+        if (isUpdating) {
+          updateTimeout = setTimeout(performUpdate, UPDATE_DELAY);
+          return;
         }
-        return;
-      }
 
-      // Execute pending update if exists
-      if (pendingUpdate) {
-        await ctx.runMutation(api.chat.mutations.updateMessage, {
-          messageId: assistantMessageId,
-          ...pendingUpdate,
-          isComplete: false,
-        });
-        pendingUpdate = null;
-      }
+        isUpdating = true;
+        try {
+          if (Object.keys(updateQueue).length > 0) {
+            await ctx.runMutation(api.chat.mutations.updateMessage, {
+              messageId: assistantMessageId,
+              ...updateQueue,
+              isComplete: false,
+            });
+            updateQueue = {};
+          }
+          updateQueue = {};
+        } catch (error) {
+          console.error("Error updating message:", error);
+        } finally {
+          isUpdating = false;
+        }
+      };
 
-      // Execute current update
-      await ctx.runMutation(api.chat.mutations.updateMessage, {
-        messageId: assistantMessageId,
-        ...updateData,
-        isComplete: false,
-      });
-      lastUpdateTime = now;
+      updateTimeout = setTimeout(performUpdate, UPDATE_DELAY);
     };
 
     try {
-      const processors: Promise<void>[] = [];
-
-      // Process text stream
-      processors.push(
-        (async () => {
-          for await (const delta of result.textStream) {
-            accumulatedContent += delta;
+      const textStreamPromise = (async () => {
+        for await (const delta of result.textStream) {
+          accumulatedContent += delta;
+          if (accumulatedContent.length % 10 === 0 || delta.includes(" ")) {
             await scheduleUpdate({ content: accumulatedContent });
           }
-        })()
-      );
-
-      // Process full stream for tool calls and reasoning
-      processors.push(
-        (async () => {
-          for await (const delta of result.fullStream) {
-            // Handle tool calls
-            if (delta.type === "tool-call") {
-              const mappedToolCall = {
-                toolCallId:
-                  delta.toolCallId || `call_${Date.now()}_${Math.random()}`,
-                toolName: delta.toolName,
-                args: delta.input || {},
-                result: undefined,
-              };
-
-              accumulatedToolCalls.push(mappedToolCall);
-
-              await scheduleUpdate({
-                content: accumulatedContent,
-                toolCalls: accumulatedToolCalls,
-              });
-            }
-            // Handle tool results
-            else if (delta.type === "tool-result") {
-              const toolCall = accumulatedToolCalls.find(
-                (tc) => tc.toolCallId === delta.toolCallId
-              );
-              if (toolCall) {
-                toolCall.result = delta.output;
-              }
-
-              await scheduleUpdate({
-                content: accumulatedContent,
-                toolCalls: accumulatedToolCalls,
-              });
-            } else if (delta.type === "reasoning-delta" && supportsReasoning) {
-              const reasoningText =
-                typeof delta.text === "string" ? delta.text : "";
-
-              if (reasoningText) {
-                accumulatedThinking += reasoningText;
-
-                await scheduleUpdate({
-                  content: accumulatedContent,
-                  thinking: accumulatedThinking,
-                });
-              }
-            }
-          }
-        })()
-      );
-
-      if (supportsReasoning) {
-        const finalResult = await result;
-
-        if (finalResult.reasoning) {
-          processors.push(
-            (async () => {
-              try {
-                const reasoning = await finalResult.reasoning;
-                if (typeof reasoning === "string" && reasoning) {
-                  accumulatedThinking = reasoning;
-
-                  await scheduleUpdate({
-                    thinking: accumulatedThinking,
-                  });
-                }
-              } catch (reasoningError) {
-                console.warn("Could not access reasoning:", reasoningError);
-              }
-            })()
-          );
         }
+        await scheduleUpdate({ content: accumulatedContent });
+      })();
 
-        try {
-          const reasoningStream = (result as any).reasoningStream;
-          if (
-            reasoningStream &&
-            typeof reasoningStream[Symbol.asyncIterator] === "function"
-          ) {
-            processors.push(
-              (async () => {
-                try {
-                  for await (const reasoningChunk of reasoningStream) {
-                    const text =
-                      typeof reasoningChunk === "string"
-                        ? reasoningChunk
-                        : reasoningChunk?.text || reasoningChunk?.content || "";
+      const fullStreamPromise = (async () => {
+        for await (const delta of result.fullStream) {
+          if (delta.type === "tool-call") {
+            const mappedToolCall = {
+              toolCallId:
+                delta.toolCallId || `call_${Date.now()}_${Math.random()}`,
+              toolName: delta.toolName,
+              args: delta.input || {},
+              result: undefined,
+            };
 
-                    if (text && typeof text === "string") {
-                      accumulatedThinking += text;
-
-                      await scheduleUpdate({
-                        thinking: accumulatedThinking,
-                      });
-                    }
-                  }
-                } catch (streamError) {
-                  console.warn("Reasoning stream error:", streamError);
-                }
-              })()
+            accumulatedToolCalls.push(mappedToolCall);
+            await scheduleUpdate({ toolCalls: accumulatedToolCalls });
+          } else if (delta.type === "tool-result") {
+            const toolCall = accumulatedToolCalls.find(
+              (tc) => tc.toolCallId === delta.toolCallId
             );
+            if (toolCall) {
+              toolCall.result = delta.output;
+              await scheduleUpdate({ toolCalls: accumulatedToolCalls });
+            }
+          } else if (delta.type === "reasoning-delta" && supportsReasoning) {
+            const reasoningText =
+              typeof delta.text === "string" ? delta.text : "";
+            if (reasoningText) {
+              accumulatedThinking += reasoningText;
+              // Only update thinking every 50 characters to reduce overhead
+              if (accumulatedThinking.length % 50 === 0) {
+                await scheduleUpdate({ thinking: accumulatedThinking });
+              }
+            }
           }
-        } catch (reasoningStreamError) {
-          console.warn(
-            "Could not access reasoning stream:",
-            reasoningStreamError
-          );
         }
+      })();
+
+      await Promise.all([textStreamPromise, fullStreamPromise]);
+
+      if (updateTimeout) {
+        clearTimeout(updateTimeout);
+        updateTimeout = null;
       }
 
-      await Promise.all(processors);
-
-      // Flush any pending updates
-      if (pendingUpdate) {
-        await ctx.runMutation(api.chat.mutations.updateMessage, {
-          messageId: assistantMessageId,
-          ...pendingUpdate,
-          isComplete: false,
-        });
+      while (isUpdating) {
+        await new Promise((resolve) => setTimeout(resolve, 10));
       }
 
-      // Final update with complete message
       await ctx.runMutation(api.chat.mutations.updateMessage, {
         messageId: assistantMessageId,
         content: accumulatedContent,
@@ -584,6 +670,15 @@ export const generateAIResponse = async (
       };
     } catch (streamError) {
       console.error("❌ Stream processing error:", streamError);
+
+      if (updateTimeout) {
+        clearTimeout(updateTimeout);
+        updateTimeout = null;
+      }
+
+      while (isUpdating) {
+        await new Promise((resolve) => setTimeout(resolve, 10));
+      }
 
       await ctx.runMutation(api.chat.mutations.updateMessage, {
         messageId: assistantMessageId,
@@ -642,6 +737,7 @@ function checkModelSupportsReasoning(
     "openai/gpt-oss-20b",
     "x-ai/grok-3",
     "x-ai/grok-3-mini",
+    "z-ai/glm-4.5-air:free",
   ];
 
   return (

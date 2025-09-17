@@ -6,7 +6,7 @@ import {
   useEffect,
   useRef,
   createContext,
-  useContext,
+  type FC,
 } from "react";
 import { useQuery, useMutation, useAction } from "convex/react";
 import { api } from "../../../backend/convex/_generated/api";
@@ -17,18 +17,8 @@ import { useModel } from "@/contexts/ModelContext";
 import { models } from "@/lib/models";
 import { motion } from "framer-motion";
 import { match, P } from "ts-pattern";
+import { useRouter } from "next/navigation";
 
-import {
-  PromptInput,
-  PromptInputAction,
-  PromptInputButton,
-  PromptInputSubmit,
-  PromptInputTextarea,
-  PromptInputToolbar,
-  PromptInputTools,
-  PromptInputAttachments,
-  PromptInputFileUpload,
-} from "@/components/ai-elements/prompt-input";
 import {
   Conversation,
   ConversationContent,
@@ -48,11 +38,7 @@ import {
   ImageIcon,
   TelescopeIcon,
   MessageCircleIcon,
-  BrainIcon,
   Loader2Icon,
-  ArrowDown,
-  ChevronDown,
-  SendIcon,
   ArrowUpIcon,
   Paperclip,
   AlertTriangleIcon,
@@ -66,6 +52,7 @@ import { UserMessage } from "./ai-elements/user-message";
 import { AIMessage } from "./ai-elements/ai-message";
 import { toast } from "sonner";
 import { ProDialog } from "./pro-dialog";
+import { PromptInputComponent } from "./PromptInputComponent";
 
 const PromptInputContext = createContext<{
   attachedFiles: Array<{
@@ -93,6 +80,8 @@ const PromptInputContext = createContext<{
   onUploadThingComplete: () => {},
 });
 
+// Define props for the extracted component
+
 interface ChatInterfaceProps {
   chatId?: Id<"chats">;
   className?: string;
@@ -102,6 +91,7 @@ export default function ChatInterface({
   chatId,
   className,
 }: ChatInterfaceProps) {
+  const router = useRouter();
   const { data: session, status } = useSession();
   const { selectedModelId, setSelectedModelId } = useModel();
   const [text, setText] = useState<string>("");
@@ -195,7 +185,6 @@ export default function ChatInterface({
   const isNewChat = !chatId && !currentChatId;
   const hasMessages = messages && messages.length > 0;
 
-  // Check if user is not authenticated
   const isUnauthenticated = status === "unauthenticated" || !session?.user;
 
   const createNewChat = useCallback(async () => {
@@ -211,53 +200,48 @@ export default function ChatInterface({
     }
   }, [createChat, session?.user]);
 
-  const handlePaperclipClick = () => {
-    if (!canModelViewFiles) {
-      toast.warning("This model does not support file uploads");
-      return;
-    }
-    fileInputRef.current?.click();
-  };
+  const handleFileUpload = useCallback(
+    async (files: FileList | null) => {
+      if (!files || files.length === 0) return;
 
-  const handleFileUpload = async (files: FileList | null) => {
-    if (!files || files.length === 0) return;
+      if (!canModelViewFiles) {
+        toast.warning("This model does not support file uploads");
+        return;
+      }
 
-    if (!canModelViewFiles) {
-      toast.warning("This model does not support file uploads");
-      return;
-    }
+      const fileArray = Array.from(files);
 
-    const fileArray = Array.from(files);
+      const validFiles = fileArray.filter((file) => {
+        const isImage = file.type.startsWith("image/");
+        const isPdf = file.type === "application/pdf";
+        return isImage || isPdf;
+      });
 
-    const validFiles = fileArray.filter((file) => {
-      const isImage = file.type.startsWith("image/");
-      const isPdf = file.type === "application/pdf";
-      return isImage || isPdf;
-    });
+      if (validFiles.length !== fileArray.length) {
+        toast.warning("Only image and PDF files are supported");
+      }
 
-    if (validFiles.length !== fileArray.length) {
-      toast.warning("Only image and PDF files are supported");
-    }
+      if (validFiles.length === 0) return;
 
-    if (validFiles.length === 0) return;
+      const previewFiles = validFiles.map((file) => ({
+        name: file.name,
+        type: file.type,
+        size: file.size,
+        url: URL.createObjectURL(file),
+      }));
 
-    const previewFiles = validFiles.map((file) => ({
-      name: file.name,
-      type: file.type,
-      size: file.size,
-      url: URL.createObjectURL(file),
-    }));
+      setAttachedFiles((prev) => [...prev, ...previewFiles]);
 
-    setAttachedFiles((prev) => [...prev, ...previewFiles]);
+      toast.success(`${previewFiles.length} file(s) uploaded successfully`);
 
-    toast.success(`${previewFiles.length} file(s) uploaded successfully`);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
+    },
+    [canModelViewFiles]
+  );
 
-    if (fileInputRef.current) {
-      fileInputRef.current.value = "";
-    }
-  };
-
-  const handleUploadThingComplete = (uploadedFiles: any[]) => {
+  const handleUploadThingComplete = useCallback((uploadedFiles: any[]) => {
     const files = uploadedFiles.map((file) => ({
       name: file.name,
       type: file.type,
@@ -271,9 +255,9 @@ export default function ChatInterface({
     });
 
     toast.success(`${files.length} file(s) uploaded successfully`);
-  };
+  }, []);
 
-  const removeAttachedFile = (index: number) => {
+  const removeAttachedFile = useCallback((index: number) => {
     setAttachedFiles((prev) => {
       const newFiles = prev.filter((_, i) => i !== index);
       const fileToRemove = prev[index];
@@ -282,43 +266,57 @@ export default function ChatInterface({
       }
       return newFiles;
     });
-  };
+  }, []);
 
-  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
+  const handleSubmit = useCallback(
+    async (e: React.FormEvent<HTMLFormElement>) => {
+      e.preventDefault();
 
-    if (!text.trim() || !session?.user) return;
+      if (!text.trim() || !session?.user) return;
 
-    setIsLoading(true);
+      setIsLoading(true);
 
-    try {
-      let activeChatId = currentChatId;
-      if (!activeChatId) {
-        activeChatId = await createNewChat();
+      try {
+        let activeChatId = currentChatId;
         if (!activeChatId) {
-          throw new Error("Failed to create chat");
+          activeChatId = await createNewChat();
+          if (!activeChatId) {
+            throw new Error("Failed to create chat");
+          }
+          router.push(`/chat/${activeChatId}`);
         }
+
+        await sendMessage({
+          chatId: activeChatId,
+          message: text.trim(),
+          modelId: selectedModelId,
+          webSearch: tool === "search",
+          imageGen: tool === "image",
+          research: tool === "research",
+          attachments: attachedFiles,
+        });
+
+        setText("");
+        setAttachedFiles([]);
+      } catch (error) {
+        console.error("Failed to send message:", error);
+        toast.error("Failed to send message");
+      } finally {
+        setIsLoading(false);
       }
-
-      await sendMessage({
-        chatId: activeChatId,
-        message: text.trim(),
-        modelId: selectedModelId,
-        webSearch: tool === "search",
-        imageGen: false,
-        research: tool === "research",
-        attachments: attachedFiles,
-      });
-
-      setText("");
-      setAttachedFiles([]);
-    } catch (error) {
-      console.error("Failed to send message:", error);
-      toast.error("Failed to send message");
-    } finally {
-      setIsLoading(false);
-    }
-  };
+    },
+    [
+      text,
+      session?.user,
+      currentChatId,
+      createNewChat,
+      sendMessage,
+      selectedModelId,
+      tool,
+      attachedFiles,
+      router,
+    ]
+  );
 
   const handleUserMessageEdit = (messageId: string, content: string) => {
     setEditingMessageId(messageId);
@@ -351,10 +349,17 @@ export default function ChatInterface({
     }
   };
 
-  const getSubmitStatus = () => {
+  const handleTextareaChange = useCallback(
+    (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+      setText(e.target.value);
+    },
+    []
+  );
+
+  const getSubmitStatus = useCallback(() => {
     if (isLoading) return "submitted";
     return undefined;
-  };
+  }, [isLoading]);
 
   const shouldShowBanner = match({
     editingMessageId,
@@ -458,15 +463,9 @@ export default function ChatInterface({
     >
       <div className={cn("flex flex-col h-full", className)}>
         <TooltipProvider>
-          <div
-            className={cn({
-              "flex flex-col h-full": hasMessages,
-              "absolute inset-0 flex flex-col justify-center": !hasMessages,
-              "pb-[30vh]": !hasMessages,
-            })}
-          >
+          <div className="flex flex-col h-full relative">
             {!hasMessages && !currentChatId && (
-              <div className="mb-6">
+              <div className="absolute inset-0 flex flex-col justify-center pb-[40vh] z-0">
                 <motion.div
                   className="max-w-3xl mx-auto font-serif text-center px-3 sm:px-6"
                   initial={{ opacity: 0, y: 20 }}
@@ -479,11 +478,12 @@ export default function ChatInterface({
                 </motion.div>
               </div>
             )}
+
             {hasMessages && (
-              <div className="flex-1 overflow-y-auto">
-                <Conversation className="h-full">
+              <div className="flex-1 overflow-y-auto relative z-0">
+                <Conversation className="h-full relative">
                   <ConversationContent className="h-full flex flex-col">
-                    <div className="flex-1 mx-auto max-w-3xl w-full px-3 sm:px-6">
+                    <div className="flex-1 mx-auto max-w-3xl w-full px-3 sm:px-6 pb-56 pt-32">
                       {messages.map((message: any, index: number) => {
                         if (message.role === "user") {
                           return (
@@ -517,438 +517,41 @@ export default function ChatInterface({
                   </ConversationContent>
                   <ConversationScrollButton
                     variant="default"
-                    className="rounded-md"
+                    className="rounded-md absolute bottom-48   right-4 z-30"
                   />
                 </Conversation>
               </div>
             )}
 
-            <div
-              className={cn(
-                "w-full px-3 sm:px-6 py-3 sm:py-4",
-                hasMessages && "mx-auto max-w-3xl border-t sm:border-t-0",
-                !hasMessages && "mx-auto max-w-4xl"
-              )}
-            >
-              {attachedFiles.length > 0 && (
-                <div className="mb-3 flex flex-wrap gap-2">
-                  {attachedFiles.map((file, index) => {
-                    const isImage = file.type.startsWith("image/");
-                    const isPdf = file.type === "application/pdf";
-
-                    if (isImage) {
-                      return (
-                        <div key={index} className="relative group">
-                          <img
-                            src={file.url}
-                            alt={file.name}
-                            className="w-20 h-20 object-cover rounded-lg border"
-                          />
-                          <button
-                            type="button"
-                            onClick={() => removeAttachedFile(index)}
-                            className="absolute -top-2 -right-2 size-6 bg-destructive text-destructive-foreground rounded-full opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-xs"
-                          >
-                            ×
-                          </button>
-                        </div>
-                      );
-                    } else {
-                      return (
-                        <div
-                          key={index}
-                          className="flex items-center gap-2 bg-muted px-3 py-2 rounded-lg text-sm max-w-[200px]"
-                        >
-                          <FileIcon className="size-4" />
-                          <span className="truncate">{file.name}</span>
-                          <button
-                            type="button"
-                            onClick={() => removeAttachedFile(index)}
-                            className="text-muted-foreground hover:text-foreground"
-                          >
-                            ×
-                          </button>
-                        </div>
-                      );
-                    }
-                  })}
-                </div>
-              )}
-
-              {match({
-                editingMessageId,
-                remainingCredits,
-                isPro,
-                isUnauthenticated,
-              })
-                .with(
-                  {
-                    isUnauthenticated: true,
-                    editingMessageId: P.nullish,
-                  },
-                  () => (
-                    <div className="flex justify-between items-center px-3 py-3 bg-sidebar/30 backdrop-blur-md text-xs text-muted-foreground border rounded-t-2xl">
-                      <div className="flex items-center gap-2">
-                        <UserIcon className="size-4" />
-                        <p>Please log in to start chatting</p>
-                      </div>
-                      <Button
-                        variant="link"
-                        className="h-6 underline font-normal cursor-pointer px-0 text-xs flex items-center gap-1"
-                        onClick={() => {
-                          // You can customize this action - redirect to login page or trigger sign-in modal
-                          window.location.href = "/auth/signin";
-                        }}
-                      >
-                        <LogInIcon className="size-3" />
-                        Sign In
-                      </Button>
-                    </div>
-                  )
-                )
-                .with(
-                  {
-                    remainingCredits: P.number.lte(0),
-                    isPro: false,
-                    editingMessageId: P.nullish,
-                    isUnauthenticated: false,
-                  },
-                  () => (
-                    <div className="flex justify-between items-center px-3 py-3 bg-sidebar/30 backdrop-blur-md text-xs text-muted-foreground  border rounded-t-2xl">
-                      <div className="flex items-center gap-2">
-                        <AlertTriangleIcon className="size-4 " />
-                        <p>You have no credits remaining.</p>
-                      </div>
-                      <Button
-                        variant="link"
-                        className="h-6 underline font-normal cursor-pointer px-0 text-xs"
-                        onClick={() => setProDialogOpen(true)}
-                      >
-                        Subscribe now to increase your limits
-                      </Button>
-                    </div>
-                  )
-                )
-                .with(
-                  {
-                    remainingCredits: P.number.lt(18),
-                    isPro: false,
-                    editingMessageId: P.nullish,
-                    isUnauthenticated: false,
-                  },
-                  () => (
-                    <div className="flex justify-between items-center px-3 py-3 bg-muted/30  w-full border-foreground/10 backdrop-blur-md text-xs text-muted-foreground border-b rounded-t-3xl">
-                      <div className="flex items-center gap-2">
-                        <AlertTriangleIcon className="size-4 " />
-                        <p>
-                          You only have {remainingCredits} credit
-                          {remainingCredits === 1 ? "" : "s"} remaining.
-                        </p>
-                      </div>
-                      <Button
-                        variant="link"
-                        className="h-6 underline font-normal cursor-pointer px-0 text-xs"
-                        onClick={() => setProDialogOpen(true)}
-                      >
-                        Subscribe now to increase your limits
-                      </Button>
-                    </div>
-                  )
-                )
-                .with(
-                  {
-                    remainingCredits: P.number.lte(0),
-                    isPro: true,
-                    editingMessageId: P.nullish,
-                    isUnauthenticated: false,
-                  },
-                  () => (
-                    <div className="flex justify-between items-center px-3 py-3 bg-muted/30  w-full border-foreground/10 backdrop-blur-md text-xs text-muted-foreground border-b rounded-t-3xl">
-                      <div className="flex items-center gap-2">
-                        <AlertTriangleIcon className="size-4 " />
-                        <p>You have no credits remaining.</p>
-                      </div>
-                      <p className="text-xs text-primary">Resets daily</p>
-                    </div>
-                  )
-                )
-                .with(
-                  {
-                    remainingCredits: P.number.lt(10),
-                    isPro: true,
-                    editingMessageId: P.nullish,
-                    isUnauthenticated: false,
-                  },
-                  () => (
-                    <div className="flex justify-between items-center px-3 py-3 bg-muted/30  w-full border-foreground/10 backdrop-blur-md text-xs text-muted-foreground border-b rounded-t-3xl">
-                      <div className="flex items-center gap-2">
-                        <AlertTriangleIcon className="size-4 " />
-                        <p>
-                          You only have {remainingCredits} credit
-                          {remainingCredits === 1 ? "" : "s"} remaining.
-                        </p>
-                      </div>
-                      <p className="text-xs text-primary">Resets daily</p>
-                    </div>
-                  )
-                )
-                .with({ editingMessageId: P.string }, () => (
-                  <div className="flex justify-between items-center px-3 py-3 bg-muted/30  w-full border-foreground/10 backdrop-blur-md text-xs text-muted-foreground border-b rounded-t-3xl">
-                    <div className="flex items-center gap-2">
-                      <EditIcon className="size-4" />
-                      <p>Editing message</p>
-                    </div>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="size-6"
-                      onClick={() => {
-                        setEditingMessageId(undefined);
-                        setText("");
-                        setAttachedFiles([]);
-                        setTool("");
-                      }}
-                    >
-                      <XIcon className="size-4" />
-                    </Button>
-                  </div>
-                ))
-                .otherwise(() => null)}
-
-              <PromptInput
-                onSubmit={handleSubmit}
-                className={cn(
-                  "p-0 bg-muted/50 backdrop-blur-md w-full border-foreground/10 overflow-hidden",
-                  shouldShowBanner
-                    ? "rounded-b-3xl rounded-t-none border-t-0"
-                    : "rounded-3xl",
-                  !hasMessages && "shadow-lg"
-                )}
-              >
-                <PromptInputAttachments />
-                <PromptInputTextarea
-                  onChange={(e) => setText(e.target.value)}
-                  value={text}
-                  placeholder={
-                    isUnauthenticated
-                      ? "Please log in to start chatting..."
-                      : "Ask me anything..."
-                  }
-                  disabled={isLoading || isUnauthenticated}
-                  className="min-h-[44px] sm:min-h-[52px] text-sm sm:text-base resize-none"
-                />
-
-                <div className="flex items-center px-3 pb-3">
-                  <div className="flex items-center bg-primary/5 rounded-full p-1 relative h-10">
-                    <PromptInputAction tooltip="Chat">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        type="button"
-                        disabled={isUnauthenticated}
-                        className={cn(
-                          "h-8 w-8 rounded-full relative z-10 hover:text-primary",
-                          tool === "" && "text-primary",
-                          isUnauthenticated && "opacity-50"
-                        )}
-                        onClick={() => setTool("")}
-                      >
-                        <MessageCircleIcon className="size-4 z-1" />
-                        {tool === "" && !isUnauthenticated && (
-                          <motion.div
-                            className="absolute inset-0 h-8 w-full rounded-full bg-background z-0"
-                            layoutId="toolThumb"
-                            transition={{
-                              type: "spring",
-                              stiffness: 500,
-                              damping: 30,
-                            }}
-                          />
-                        )}
-                      </Button>
-                    </PromptInputAction>
-
-                    <PromptInputAction
-                      tooltip={(() => {
-                        if (isUnauthenticated)
-                          return "Please log in to use tools";
-                        if (!canModelUseTools)
-                          return "This model cannot use tools";
-                        if (remainingSearches <= 0)
-                          return "You have reached your search limit";
-                        if (canSearch) return "Search the web";
-                        return "Search is not available";
-                      })()}
-                    >
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        type="button"
-                        disabled={
-                          !canSearch || !canModelUseTools || isUnauthenticated
-                        }
-                        className={cn(
-                          "h-8 w-8 rounded-full relative z-10 hover:text-primary",
-                          tool === "search" && "text-primary",
-                          (!canSearch ||
-                            !canModelUseTools ||
-                            isUnauthenticated) &&
-                            "opacity-50"
-                        )}
-                        onClick={() => {
-                          if (isUnauthenticated) {
-                            toast.warning("Please log in to use tools");
-                            return;
-                          }
-                          if (!canModelUseTools) {
-                            toast.warning("This model cannot use tools");
-                            return;
-                          }
-                          if (remainingSearches <= 0) {
-                            toast.warning("You have reached your search limit");
-                            return;
-                          }
-                          if (canSearch) {
-                            setTool("search");
-                          } else {
-                            toast.warning("Search is not available");
-                          }
-                        }}
-                      >
-                        <GlobeIcon className="size-4 z-1" />
-                        {tool === "search" && !isUnauthenticated && (
-                          <motion.div
-                            className="absolute inset-0 h-8 w-full rounded-full bg-background z-0"
-                            layoutId="toolThumb"
-                            transition={{
-                              type: "spring",
-                              stiffness: 500,
-                              damping: 30,
-                            }}
-                          />
-                        )}
-                      </Button>
-                    </PromptInputAction>
-
-                    <PromptInputAction
-                      tooltip={(() => {
-                        if (isUnauthenticated)
-                          return "Please log in to use tools";
-                        if (!canModelUseTools)
-                          return "This model cannot use tools";
-                        if (!isPro)
-                          return "Research is only available for Pro users";
-                        if (remainingResearches <= 0)
-                          return "You have reached your research limit";
-                        if (canResearch) return "Deep research";
-                        return "Deep research is not available";
-                      })()}
-                    >
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        type="button"
-                        disabled={
-                          !canResearch || !canModelUseTools || isUnauthenticated
-                        }
-                        className={cn(
-                          "h-8 w-16 rounded-full relative z-10 hover:text-primary",
-                          tool === "research" && "text-primary",
-                          (!canResearch ||
-                            !canModelUseTools ||
-                            isUnauthenticated) &&
-                            "opacity-50"
-                        )}
-                        onClick={() => {
-                          if (isUnauthenticated) {
-                            toast.warning("Please log in to use tools");
-                            return;
-                          }
-                          if (!canModelUseTools) {
-                            toast.warning("This model cannot use tools");
-                            return;
-                          }
-                          if (!isPro) {
-                            toast.warning(
-                              "Research is only available for Pro users"
-                            );
-                            return;
-                          }
-                          if (remainingResearches <= 0) {
-                            toast.warning(
-                              "You have reached your research limit"
-                            );
-                            return;
-                          }
-                          if (canResearch) {
-                            setTool("research");
-                          }
-                        }}
-                      >
-                        <div className="flex items-center gap-1">
-                          <TelescopeIcon className="size-4 z-1" />
-                          <span className="text-[8px] font-medium text-primary px-1 py-0.5 rounded-full z-1 bg-primary/10">
-                            BETA
-                          </span>
-                        </div>
-                        {tool === "research" && !isUnauthenticated && (
-                          <motion.div
-                            className="absolute inset-0 h-8 w-full rounded-full bg-background z-0"
-                            layoutId="toolThumb"
-                            transition={{
-                              type: "spring",
-                              stiffness: 500,
-                              damping: 30,
-                            }}
-                          />
-                        )}
-                      </Button>
-                    </PromptInputAction>
-                  </div>
-
-                  <div className="ml-auto flex items-center gap-2">
-                    <PromptInputAction
-                      tooltip={match({ canModelViewFiles, isUnauthenticated })
-                        .with(
-                          { isUnauthenticated: true },
-                          () => "Please log in to upload files"
-                        )
-                        .with({ canModelViewFiles: true }, () => "Attach files")
-                        .with(
-                          { canModelViewFiles: false },
-                          () => "This model does not support file uploads"
-                        )
-                        .otherwise(() => "Attach files")}
-                    >
-                      <PromptInputFileUpload
-                        accept="image/*,application/pdf"
-                        multiple={true}
-                        onFileSelect={handleFileUpload}
-                        onUploadComplete={handleUploadThingComplete}
-                        className={cn(
-                          "h-8 w-8 rounded-full",
-                          (isUnauthenticated || !canModelViewFiles) &&
-                            "opacity-50"
-                        )}
-                      />
-                    </PromptInputAction>
-
-                    <PromptInputSubmit
-                      disabled={
-                        !text.trim() ||
-                        isLoading ||
-                        isUnauthenticated ||
-                        (!isPro && (remainingCredits ?? 0) <= 0)
-                      }
-                      status={getSubmitStatus()}
-                      className="min-h-[36px] sm:min-h-[40px] px-3 sm:px-4 text-xs sm:text-sm rounded-full"
-                    >
-                      <ArrowUpIcon className="size-4" />
-                    </PromptInputSubmit>
-                  </div>
-                </div>
-              </PromptInput>
-            </div>
+            <PromptInputComponent
+              hasMessages={hasMessages}
+              attachedFiles={attachedFiles}
+              removeAttachedFile={removeAttachedFile}
+              editingMessageId={editingMessageId}
+              remainingCredits={remainingCredits}
+              isPro={isPro}
+              isUnauthenticated={isUnauthenticated}
+              setProDialogOpen={setProDialogOpen}
+              setEditingMessageId={setEditingMessageId}
+              setText={setText}
+              setAttachedFiles={setAttachedFiles}
+              setTool={setTool}
+              handleSubmit={handleSubmit}
+              handleTextareaChange={handleTextareaChange}
+              text={text}
+              isLoading={isLoading}
+              tool={tool}
+              getSubmitStatus={getSubmitStatus}
+              shouldShowBanner={shouldShowBanner}
+              canModelUseTools={canModelUseTools}
+              canModelViewFiles={canModelViewFiles}
+              canSearch={canSearch}
+              canResearch={canResearch}
+              remainingSearches={remainingSearches}
+              remainingResearches={remainingResearches}
+              handleFileUpload={handleFileUpload}
+              handleUploadThingComplete={handleUploadThingComplete}
+            />
           </div>
         </TooltipProvider>
 

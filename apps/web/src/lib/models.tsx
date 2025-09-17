@@ -198,6 +198,26 @@ export const models: ModelInfo[] = [
   },
 
   {
+    id: "z-ai/glm-4.5-air:free",
+    name: "GLM 4.5 Air",
+    description: "Via OpenRouter",
+    vendor: "qwen",
+    provider: "openrouter",
+    category: "qwen",
+    features: ["code", "weather"],
+    isPro: false,
+    supportsThinking: true,
+    unauthenticated: false,
+    attachmentsSuppport: {
+      pdf: false,
+      image: false,
+    },
+    isApiKeyOnly: true,
+    toolCalls: false,
+    isFree: true,
+  },
+
+  {
     id: "meta-llama/llama-4-maverick:free",
     name: "Llama 4 Maverick",
     description: "Via OpenRouter",

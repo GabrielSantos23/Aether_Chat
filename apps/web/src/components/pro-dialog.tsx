@@ -8,8 +8,8 @@ import {
 } from "@/components/ui/dialog";
 import { CheckIcon, DiamondIcon, MoveRightIcon } from "lucide-react";
 import { useState } from "react";
-import ZeronIcon from "./icons/zeron";
 import ModelIcon from "./icons/model-icon";
+import AetheriaIcon from "./icons/Aether";
 
 interface ProDialogProps {
   open: boolean;
@@ -31,7 +31,7 @@ export function ProDialog({ open, onOpenChange }: ProDialogProps) {
             </div>
             <div className="relative z-10 flex flex-col gap-4">
               <DialogTitle className="flex items-center gap-2">
-                <ZeronIcon className="size-8" />
+                <AetheriaIcon className="size-12" />
                 <span className="text-2xl font-bold">PRO</span>
               </DialogTitle>
               <DialogDescription className="text-white/90">

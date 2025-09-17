@@ -9,13 +9,21 @@ import {
 import { ModelProvider } from "@/contexts/ModelContext";
 import { useParams } from "react-router-dom";
 import { RightSidebar } from "@/components/right-sidebar";
+import { useQuery } from "convex/react";
+import { api } from "@aether-ai-2/backend/convex/_generated/api";
 
 export default function Chat() {
   const { id } = useParams<{ id?: string }>();
 
+  const chat = useQuery(
+    api.chat.queries.getChat,
+    id ? { chatId: id as any } : "skip"
+  );
+  const pageTitle = chat?.title ? `${chat.title}` : "Aether AI | Chat";
+
   return (
     <ModelProvider>
-      <title>Aether AI | Chat</title>
+      <title>{pageTitle}</title>
       <SidebarProvider>
         <AppSidebar />
         <SidebarInset>

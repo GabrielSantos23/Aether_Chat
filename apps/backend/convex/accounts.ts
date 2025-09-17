@@ -1,7 +1,6 @@
-import { query, mutation, action } from "./_generated/server";
+import { query, mutation } from "./_generated/server";
 import { Id } from "./_generated/dataModel";
 import { v } from "convex/values";
-import { internal } from "./_generated/api";
 
 export const getGoogleAccount = query({
   handler: async (ctx) => {
@@ -15,6 +14,103 @@ export const getGoogleAccount = query({
       .collect();
 
     return accounts.find((a) => a.provider === "google") ?? null;
+  },
+});
+
+export const upsertAccount = mutation({
+  args: {
+    type: v.union(
+      v.literal("email"),
+      v.literal("oidc"),
+      v.literal("oauth"),
+      v.literal("webauthn")
+    ),
+    provider: v.string(),
+    providerAccountId: v.string(),
+    access_token: v.optional(v.string()),
+    expires_at: v.optional(v.number()),
+    refresh_token: v.optional(v.string()),
+    scope: v.optional(v.string()),
+    token_type: v.optional(v.string()),
+    id_token: v.optional(v.string()),
+    session_state: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    // Ensure the caller is authenticated and resolve a Convex userId from identity
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) throw new Error("Not authenticated");
+
+    // Try to find existing user by email; create if missing
+    let userId: Id<"users"> | null = null;
+    let existingUser: any = null;
+    if (identity.email) {
+      existingUser = await ctx.db
+        .query("users")
+        .withIndex("email", (q) => q.eq("email", identity.email!))
+        .first();
+      if (existingUser) {
+        userId = existingUser._id as Id<"users">;
+      }
+    }
+    if (!userId) {
+      const newUser: any = {
+        name: identity.name || "User",
+        email: identity.email || "user@example.com",
+        image: identity.picture || "",
+      };
+      if (
+        identity.tokenIdentifier &&
+        typeof identity.tokenIdentifier === "string"
+      ) {
+        newUser.tokenIdentifier = identity.tokenIdentifier;
+      }
+      userId = await ctx.db.insert("users", newUser);
+    } else {
+      // Update existing user with latest profile fields if changed
+      const updates: Partial<{ name: string; image: string }> = {};
+      if (
+        typeof identity.name === "string" &&
+        identity.name !== existingUser?.name
+      ) {
+        updates.name = identity.name;
+      }
+      if (
+        typeof identity.picture === "string" &&
+        identity.picture !== existingUser?.image
+      ) {
+        updates.image = identity.picture;
+      }
+      if (Object.keys(updates).length > 0) {
+        await ctx.db.patch(userId, updates as any);
+      }
+    }
+
+    // Insert or update existing account by composite key (provider, providerAccountId)
+    const existing = await ctx.db
+      .query("accounts")
+      .withIndex("providerAndAccountId", (q) =>
+        q
+          .eq("provider", args.provider)
+          .eq("providerAccountId", args.providerAccountId)
+      )
+      .first();
+
+    if (existing) {
+      await ctx.db.patch(existing._id, {
+        userId,
+        type: args.type,
+        access_token: args.access_token,
+        expires_at: args.expires_at,
+        refresh_token: args.refresh_token,
+        scope: args.scope,
+        token_type: args.token_type,
+        id_token: args.id_token,
+        session_state: args.session_state,
+      });
+      return existing._id as Id<"accounts">;
+    }
+
+    return await ctx.db.insert("accounts", { ...args, userId });
   },
 });
 

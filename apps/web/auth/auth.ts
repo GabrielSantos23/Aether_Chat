@@ -5,6 +5,8 @@ import EmailProvider from "next-auth/providers/email";
 import { SignJWT, importPKCS8 } from "jose";
 import { Resend } from "resend";
 import { MemoryAdapter } from "./memory-adapter";
+import { ConvexHttpClient } from "convex/browser";
+import { api } from "@aether-ai-2/backend/convex/_generated/api";
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
   secret: process.env.AUTH_SECRET || "fallback-secret-for-development",
@@ -168,6 +170,63 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         }
       }
       return { ...session, userId };
+    },
+  },
+  events: {
+    async signIn({ user, account }) {
+      try {
+        if (!account) return;
+        if (
+          !process.env.NEXT_PUBLIC_CONVEX_URL ||
+          !process.env.CONVEX_AUTH_PRIVATE_KEY
+        )
+          return;
+
+        // Create a short-lived Convex token for this server-side call
+        const CONVEX_SITE_URL = process.env.NEXT_PUBLIC_CONVEX_URL.replace(
+          /.cloud$/,
+          ".site"
+        );
+        const privateKey = await importPKCS8(
+          process.env.CONVEX_AUTH_PRIVATE_KEY,
+          "RS256"
+        );
+        const convexToken = await new SignJWT({
+          sub: user.id,
+          email: user.email,
+          name: user.name,
+          picture: user.image,
+        })
+          .setProtectedHeader({ alg: "RS256" })
+          .setIssuedAt()
+          .setIssuer(CONVEX_SITE_URL)
+          .setAudience("convex")
+          .setExpirationTime("10m")
+          .sign(privateKey);
+
+        const client = new ConvexHttpClient(process.env.NEXT_PUBLIC_CONVEX_URL);
+        client.setAuth(convexToken);
+
+        const scope =
+          typeof (account as any).scope === "string"
+            ? ((account as any).scope as string)
+            : undefined;
+
+        await client.mutation(api.accounts.upsertAccount, {
+          type: (account.type as any) ?? "oauth",
+          provider: account.provider,
+          providerAccountId: account.providerAccountId,
+          access_token: account.access_token as string | undefined,
+          refresh_token: account.refresh_token as string | undefined,
+          expires_at: (account.expires_at as any) ?? undefined,
+          token_type: account.token_type as string | undefined,
+          id_token: account.id_token as string | undefined,
+          session_state: (account as any).session_state as string | undefined,
+          scope,
+        });
+      } catch (err) {
+        console.warn("Failed to upsert Convex account:", err);
+      }
     },
   },
 });

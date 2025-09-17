@@ -32,7 +32,6 @@ export function SourcesButton({ toolCalls }: SourcesButtonProps) {
   const query = searchCall?.args?.query || "Search";
 
   const handleClick = () => {
-    // Always open to show progress and (eventually) results
     openSearchSidebar(searchResults, query);
   };
 
@@ -43,26 +42,16 @@ export function SourcesButton({ toolCalls }: SourcesButtonProps) {
       transition={{ duration: 0.2 }}
       className="mt-3"
     >
-      <Button
-        variant="outline"
-        size="sm"
+      <button
         onClick={handleClick}
         onMouseEnter={() => setIsHovered(true)}
         onMouseLeave={() => setIsHovered(false)}
-        className="flex items-center gap-2 text-xs hover:bg-muted transition-colors"
+        className="flex items-center gap-2 text-muted-foreground hover:text-foreground px-2 py-1 rounded-md cursor-pointer  hover:bg-muted transition-colors"
       >
         <SearchIcon className="w-3 h-3" />
-        <span>{isDone ? query : "Searching"}</span>
-        {!isDone ? (
-          <Loader2Icon className="w-3 h-3 animate-spin" />
-        ) : (
-          <ExternalLink
-            className={`w-3 h-3 transition-transform ${
-              isHovered ? "translate-x-0.5 -translate-y-0.5" : ""
-            }`}
-          />
-        )}
-      </Button>
+        <span>{isDone ? "Searched" : "Searching"}</span>
+        {!isDone && <Loader2Icon className="size-3 animate-spin" />}
+      </button>
     </motion.div>
   );
 }

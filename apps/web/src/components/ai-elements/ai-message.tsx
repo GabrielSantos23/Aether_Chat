@@ -42,6 +42,7 @@ export const AIMessage = memo(function AIMessage({
     : undefined;
   const modelName = modelObj?.name || (message.modelId as string | undefined);
   const modelIcon = (modelObj?.icon as ModelType | undefined) ?? undefined;
+  const isStreaming = !message.isComplete && message.content;
 
   const handleCopy = async () => {
     if (message.content) {
@@ -74,7 +75,6 @@ export const AIMessage = memo(function AIMessage({
   const isReasoningStreaming = hasThinking && !message.isComplete;
   const reasoningDuration = message.thinkingDuration || 0;
 
-  // Extract URLs from search tool calls
   const searchToolCalls =
     message.toolCalls?.filter((tc: any) => tc.toolName === "webSearch") || [];
   const searchResults =
@@ -83,12 +83,18 @@ export const AIMessage = memo(function AIMessage({
 
   if (isLoading) {
     return (
-      <Message from="assistant" key={message._id} data-message-id={message._id}>
+      <Message
+        from="assistant"
+        key={message._id}
+        data-message-id={message._id}
+        className="w-full [&>div]:max-w-none"
+      >
         <MessageContent
           className={cn(
+            "w-full",
             "group-[.is-assistant]:bg-transparent group-[.is-assistant]:border-transparent",
             "rounded-2xl group-[.is-assistant]:rounded-bl-sm",
-            "text-sm sm:text-[15px] leading-5 sm:leading-6"
+            "text-base sm:text-lg leading-6 sm:leading-7"
           )}
         >
           <PendingMessage />
@@ -98,16 +104,22 @@ export const AIMessage = memo(function AIMessage({
   }
 
   return (
-    <Message from="assistant" key={message._id} data-message-id={message._id}>
+    <Message
+      from="assistant"
+      key={message._id}
+      data-message-id={message._id}
+      className="w-full [&>div]:max-w-none"
+    >
       <MessageContent
         className={cn(
-          "group-[.is-assistant]:bg-transparent group-[.is-assistant]:border-transparent",
+          "w-full",
+          "group-[.is-assistant]:bg-transparent group-[.is-assistant]:border-transparent group-[.is-assistant]:w-full",
           "rounded-2xl group-[.is-assistant]:rounded-bl-sm",
-          "text-sm sm:text-[15px] leading-5 sm:leading-6"
+          "text-sm sm:text-[15px] leading-5 sm:leading-6",
+          "streaming-text"
         )}
       >
         <div className="space-y-2 sm:space-y-3">
-          {/* Sources button at the top */}
           {message.toolCalls && message.toolCalls.length > 0 && (
             <div className="space-y-2">
               <SourcesButton toolCalls={message.toolCalls} />
@@ -121,15 +133,20 @@ export const AIMessage = memo(function AIMessage({
                 isStreaming={isReasoningStreaming}
                 duration={reasoningDuration}
               >
-                <ReasoningTrigger />
-                <ReasoningContent className="whitespace-pre-wrap text-muted-foreground">
+                <ReasoningTrigger className="hover:text-foreground text-muted-foreground cursor-pointer" />
+
+                <ReasoningContent className="whitespace-pre-wrap text-muted-foreground bg-sidebar rounded-md border px-2">
                   {message.thinking}
                 </ReasoningContent>
               </Reasoning>
             </div>
           )}
 
-          {message.content && <Markdown animated>{message.content}</Markdown>}
+          {message.content && (
+            <Markdown animated className="streaming-text">
+              {message.content}
+            </Markdown>
+          )}
 
           {message.attachments && message.attachments.length > 0 && (
             <div className="space-y-2">
@@ -145,16 +162,13 @@ export const AIMessage = memo(function AIMessage({
             </div>
           )}
 
-          {/* URL results at the bottom */}
-          {urls.length > 0 && (
+          {message.isComplete && urls.length > 0 && (
             <div className="mt-4">
               <UrlResultButton
                 urls={urls}
                 count={urls.length}
                 label={urls.length === 1 ? "source" : "sources"}
-                onClick={() => {
-                  // You can add click handler here if needed
-                }}
+                onClick={() => {}}
               />
             </div>
           )}

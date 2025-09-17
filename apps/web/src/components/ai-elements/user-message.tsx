@@ -47,7 +47,7 @@ export const UserMessage = memo(function UserMessage({
     >
       <MessageContent
         className={cn(
-          "group-[.is-user]:bg-muted border dark:group-[.is-user]:text-foreground group-[.is-user]:text-foreground",
+          "group-[.is-user]:bg-muted border dark:group-[.is-user]:text-foreground group-[.is-user]:text-foreground border-muted-foreground/20",
           "rounded-2xl group-[.is-user]:rounded-br-sm",
           "text-sm sm:text-[15px] leading-5 sm:leading-6"
         )}
