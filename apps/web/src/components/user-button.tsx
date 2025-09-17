@@ -228,7 +228,7 @@ export function UserButton({
             asChild
           >
             <a
-              href="https://github.com/aether-ai/aether-ai"
+              href="https://github.com/GabrielSantos23/Aether_Chat"
               target="_blank"
               rel="noreferrer"
             >

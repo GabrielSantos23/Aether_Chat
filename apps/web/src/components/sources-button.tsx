@@ -27,8 +27,14 @@ export function SourcesButton({ toolCalls }: SourcesButtonProps) {
   }
 
   const searchCall = searchToolCalls[0];
-  const isDone = searchCall?.result !== undefined;
-  const searchResults = (isDone && (searchCall?.result || [])) || [];
+  const hasResult = searchCall?.result !== undefined;
+  const hasNonEmptyArrayResult = Array.isArray(searchCall?.result)
+    ? searchCall.result.length > 0
+    : false;
+  const isDone =
+    hasResult && (hasNonEmptyArrayResult || !Array.isArray(searchCall?.result));
+  const searchResults =
+    isDone && Array.isArray(searchCall?.result) ? searchCall.result : [];
   const query = searchCall?.args?.query || "Search";
 
   const handleClick = () => {

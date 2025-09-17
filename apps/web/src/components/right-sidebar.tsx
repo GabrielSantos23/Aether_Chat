@@ -4,9 +4,18 @@ import { useEffect, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { motion } from "framer-motion";
-import { Brain, CheckIcon, SearchIcon, X, ExternalLink } from "lucide-react";
+import { Brain, ExternalLink, X, SearchIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useSidebar } from "@/contexts/sidebar-context";
+import {
+  Sidebar,
+  SidebarContent,
+  SidebarHeader,
+  SidebarGroup,
+  SidebarGroupContent,
+  SidebarGroupLabel,
+} from "@/components/ui/sidebar";
+import { useTheme } from "@/hooks/use-theme";
 
 interface ToolSidebarState {
   tool: "search" | "research";
@@ -33,20 +42,6 @@ interface ResearchResult {
   reasoning?: string;
 }
 
-interface ToolCall {
-  toolCallId: string;
-  toolName: string;
-  args: {
-    query: string;
-    maxResults?: number;
-    searchDepth?: string;
-    timeRange?: string;
-  };
-  result: SearchResult[];
-}
-
-const mockToolSidebarState: ToolSidebarState | null = null;
-
 export function RightSidebar() {
   const {
     isOpen,
@@ -57,8 +52,8 @@ export function RightSidebar() {
     researchQuery,
     closeSidebar,
   } = useSidebar();
-
-  const toolSidebar: ToolSidebarState | null = (() => {
+  const { sidebarVariant, isLoading } = useTheme();
+  const toolSidebar: ToolSidebarState | null = useMemo(() => {
     if (sidebarType === "search" && searchResults.length > 0) {
       return {
         tool: "search",
@@ -78,7 +73,19 @@ export function RightSidebar() {
       };
     }
     return null;
-  })();
+  }, [sidebarType, searchResults, searchQuery, researchResults, researchQuery]);
+
+  const title = useMemo(() => {
+    if (!toolSidebar) return "Tool Results";
+    switch (toolSidebar.tool) {
+      case "search":
+        return "Search Results";
+      case "research":
+        return "Research Results";
+      default:
+        return "Tool Results";
+    }
+  }, [toolSidebar]);
 
   useEffect(() => {
     (window as any).closeToolSidebar = closeSidebar;
@@ -88,86 +95,50 @@ export function RightSidebar() {
     return null;
   }
 
-  return (
-    <div className="fixed top-0 right-0 h-full w-80 bg-background border-l border-border z-50 flex flex-col">
-      <ToolSidebarHeader tool={toolSidebar.tool} onClose={closeSidebar} />
-      <ToolSidebarContent
-        tool={toolSidebar.tool}
-        messageId={toolSidebar.messageId}
-        toolCallId={toolSidebar.toolCallId}
-        searchResults={toolSidebar.searchResults}
-        researchResults={toolSidebar.researchResults}
-        query={toolSidebar.query}
-      />
-    </div>
-  );
-}
-
-function ToolSidebarHeader({
-  tool,
-  onClose,
-}: {
-  tool: "search" | "research";
-  onClose: () => void;
-}) {
-  const title = useMemo(() => {
-    switch (tool) {
-      case "search":
-        return "Search Results";
-      case "research":
-        return "Research Results";
-      default:
-        return null;
-    }
-  }, [tool]);
-
-  return (
-    <div className="flex flex-row p-3 justify-between items-center border-b border-foreground/10 bg-background z-10">
-      <h3 className="text-lg font-semibold flex gap-2 items-center">{title}</h3>
-      <Button variant="ghost" size="icon" onClick={onClose}>
-        <X className="size-4" />
-      </Button>
-    </div>
-  );
-}
-
-function ToolSidebarContent({
-  tool,
-  messageId,
-  toolCallId,
-  searchResults,
-  researchResults,
-  query,
-}: {
-  tool: "search" | "research";
-  messageId: string;
-  toolCallId: string;
-  searchResults?: SearchResult[];
-  researchResults?: ResearchResult[];
-  query?: string;
-}) {
-  switch (tool) {
-    case "search":
-      return (
-        <div className="flex-1 overflow-y-auto px-4 py-4">
-          <SearchToolSidebarContent
-            searchResults={searchResults}
-            query={query}
-          />
-        </div>
-      );
-    case "research":
-      return (
-        <div className="flex-1 overflow-y-auto px-4 py-4">
-          <ResearchToolSidebarContent
-            researchResults={researchResults}
-            query={query}
-          />
-        </div>
-      );
-    default:
-      return null;
+  if (isLoading) {
+    return null;
   }
+
+  return (
+    <Sidebar
+      side="right"
+      collapsible="none"
+      className={cn("w-80 ", sidebarVariant === "sidebar" && "border-l")}
+      variant={sidebarVariant}
+    >
+      <SidebarHeader className="  top-5 z-20 py-4 flex flex-row justify-between items-center border-b border-foreground/10 bg-background/10 backdrop-blur-md">
+        <h3 className="text-lg font-semibold flex gap-2 items-center">
+          {toolSidebar.tool === "search" ? (
+            <SearchIcon className="size-4" />
+          ) : (
+            <Brain className="size-4" />
+          )}
+          {title}
+        </h3>
+        <Button variant="ghost" size="icon" onClick={closeSidebar}>
+          <X className="size-4" />
+        </Button>
+      </SidebarHeader>
+
+      <SidebarContent className="px-4 py-4 ">
+        <SidebarGroup>
+          <SidebarGroupContent>
+            {toolSidebar.tool === "search" ? (
+              <SearchToolSidebarContent
+                searchResults={toolSidebar.searchResults}
+                query={toolSidebar.query}
+              />
+            ) : (
+              <ResearchToolSidebarContent
+                researchResults={toolSidebar.researchResults}
+                query={toolSidebar.query}
+              />
+            )}
+          </SidebarGroupContent>
+        </SidebarGroup>
+      </SidebarContent>
+    </Sidebar>
+  );
 }
 
 function SearchToolSidebarContent({
@@ -179,16 +150,13 @@ function SearchToolSidebarContent({
 }) {
   const results = searchResults || [];
 
-  if (query) {
-  }
-
   if (!results || results.length === 0) {
     return (
       <div className="space-y-3">
         {query && (
-          <div className="text-sm font-medium text-muted-foreground p-2">
+          <SidebarGroupLabel className="text-muted-foreground">
             Searching for: "{query}"
-          </div>
+          </SidebarGroupLabel>
         )}
         {Array.from({ length: 3 }).map((_, i) => (
           <motion.div
@@ -214,11 +182,6 @@ function SearchToolSidebarContent({
 
   return (
     <div className="space-y-3">
-      {query && (
-        <div className="text-sm font-medium text-muted-foreground p-2 border-b">
-          Search results for: "{query}"
-        </div>
-      )}
       {results.map((result, i) => {
         let hostname = "example.com";
         try {
@@ -234,16 +197,16 @@ function SearchToolSidebarContent({
             animate={{ opacity: 1 }}
             transition={{ duration: 0.2 * (i + 1) }}
             key={result.url}
-            className="flex flex-col gap-2 p-3 rounded-lg hover:bg-muted transition-colors"
+            className="flex flex-col gap-2 p-3 rounded-lg hover:bg-muted transition-colors group"
             href={result.url}
             target="_blank"
             rel="noopener noreferrer"
           >
             <div className="flex items-start justify-between gap-2">
-              <div className="text-xs font-medium line-clamp-2 flex-1">
+              <div className="text-xs font-medium line-clamp-2 flex-1 group-hover:text-primary">
                 {result.title}
               </div>
-              <ExternalLink className="size-3 text-muted-foreground flex-shrink-0 mt-0.5" />
+              <ExternalLink className="size-3 text-muted-foreground flex-shrink-0 mt-0.5 group-hover:text-primary" />
             </div>
 
             <div className="text-xs text-muted-foreground line-clamp-3">
@@ -282,9 +245,9 @@ function ResearchToolSidebarContent({
     return (
       <div className="space-y-3">
         {query && (
-          <div className="text-sm font-medium text-muted-foreground p-2">
+          <SidebarGroupLabel className="text-muted-foreground">
             Researching: "{query}"
-          </div>
+          </SidebarGroupLabel>
         )}
         {Array.from({ length: 2 }).map((_, i) => (
           <motion.div
@@ -311,9 +274,9 @@ function ResearchToolSidebarContent({
   return (
     <div className="space-y-3">
       {query && (
-        <div className="text-sm font-medium text-muted-foreground p-2 border-b">
+        <SidebarGroupLabel className="text-muted-foreground border-b pb-2">
           Research results for: "{query}"
-        </div>
+        </SidebarGroupLabel>
       )}
       {results.map((result, index) => (
         <motion.div

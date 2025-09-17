@@ -8,7 +8,7 @@ import {
   createContext,
   type FC,
 } from "react";
-import { useQuery, useMutation, useAction } from "convex/react";
+import { useQuery, useMutation, useAction, useConvexAuth } from "convex/react";
 import { api } from "../../../backend/convex/_generated/api";
 import type { Id } from "../../../backend/convex/_generated/dataModel";
 import { useSession } from "next-auth/react";
@@ -93,6 +93,8 @@ export default function ChatInterface({
 }: ChatInterfaceProps) {
   const router = useRouter();
   const { data: session, status } = useSession();
+  const { isLoading: isConvexLoading, isAuthenticated: isConvexAuthenticated } =
+    useConvexAuth();
   const { selectedModelId, setSelectedModelId } = useModel();
   const [text, setText] = useState<string>("");
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -165,25 +167,66 @@ export default function ChatInterface({
   const editMessageAndRegenerate = useAction(
     api.chat.actions.editMessageAndRegenerate
   );
-  const messages = useQuery(
-    api.chat.queries.getChatMessages,
-    currentChatId ? { chatId: currentChatId } : "skip"
-  );
+
+  const hasConvexToken = !!(session && (session as any).convexToken);
+  const isAuthenticated =
+    status === "authenticated" &&
+    !!session?.user &&
+    hasConvexToken &&
+    isConvexAuthenticated;
+
+  // Add a loading state check to prevent queries from running too early
+  const isSessionLoading = status === "loading" || isConvexLoading;
+  const shouldSkipQueries =
+    isSessionLoading || !isAuthenticated || !currentChatId;
+
   const chat = useQuery(
     api.chat.queries.getChat,
-    currentChatId ? { chatId: currentChatId } : "skip"
+    shouldSkipQueries ? "skip" : { chatId: currentChatId }
   );
 
-  const limitsStatus = useQuery(api.limits.getStatus, {} as any);
+  const shouldSkipMessages =
+    shouldSkipQueries || chat === undefined || chat === null;
+
+  const messages = useQuery(
+    api.chat.queries.getChatMessages,
+    shouldSkipMessages ? "skip" : { chatId: currentChatId }
+  );
+
+  // Handle case where chat is deleted while viewing
+  useEffect(() => {
+    if (
+      !isSessionLoading &&
+      isAuthenticated &&
+      currentChatId &&
+      chat === null
+    ) {
+      // Chat was deleted or access denied, redirect to new chat
+      router.push("/chat");
+    }
+  }, [chat, currentChatId, isAuthenticated, isSessionLoading, router]);
+
+  const limitsStatus = useQuery(
+    api.limits.getStatus,
+    isSessionLoading || !isAuthenticated ? "skip" : ({} as any)
+  );
+
   const isPro = limitsStatus?.role === "pro";
   const remainingCredits = isPro
     ? Number.POSITIVE_INFINITY
     : limitsStatus?.remaining ?? 0;
 
-  const isError = messages === null && currentChatId;
-  const isChatLoading = messages === undefined && currentChatId;
+  const isError =
+    (messages === null || chat === null) && currentChatId && !isSessionLoading;
+  const isChatLoading =
+    ((messages === undefined || chat === undefined) && currentChatId) ||
+    isSessionLoading;
   const isNewChat = !chatId && !currentChatId;
-  const hasMessages = messages && messages.length > 0;
+  const hasMessages = (messages?.length ?? 0) > 0;
+  const safeMessages = messages ?? [];
+
+  // If chat is null but we have a chatId, it means chat was deleted or access denied
+  const chatDeleted = currentChatId && chat === null && !isSessionLoading;
 
   const isUnauthenticated = status === "unauthenticated" || !session?.user;
 
@@ -324,13 +367,13 @@ export default function ChatInterface({
   };
 
   const handleAIMessageRegenerate = async (messageIndex: number) => {
-    if (!messages) return;
+    if (!safeMessages.length) return;
 
     try {
       let previousUserMessage: any | null = null;
       for (let i = messageIndex - 1; i >= 0; i--) {
-        if (messages[i].role === "user") {
-          previousUserMessage = messages[i];
+        if (safeMessages[i].role === "user") {
+          previousUserMessage = safeMessages[i];
           break;
         }
       }
@@ -413,7 +456,21 @@ export default function ChatInterface({
     .with({ editingMessageId: P.string }, () => true)
     .otherwise(() => false);
 
-  if (isChatLoading) {
+  // Show loading state during session loading
+  if (isSessionLoading) {
+    return (
+      <div className="flex flex-col h-full">
+        <div className="flex-1 flex items-center justify-center p-4">
+          <div className="text-center">
+            <Loader2Icon className="size-4 animate-spin mx-auto" />
+            <p className="text-muted-foreground mt-4 text-sm">Loading...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (isChatLoading && !isSessionLoading) {
     return (
       <div className="flex flex-col h-full">
         <div className="flex-1 flex items-center justify-center p-4">
@@ -428,7 +485,7 @@ export default function ChatInterface({
     );
   }
 
-  if (isError && !isNewChat) {
+  if ((isError || chatDeleted) && !isNewChat) {
     return (
       <div className="flex flex-col h-full">
         <div className="flex-1 flex items-center justify-center p-4">
@@ -440,7 +497,7 @@ export default function ChatInterface({
               This chat may have been deleted or you don't have access to it.
             </p>
             <button
-              onClick={() => (window.location.href = "/chat")}
+              onClick={() => router.push("/chat")}
               className="px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 mt-4 text-sm"
             >
               Start a new chat
@@ -484,7 +541,7 @@ export default function ChatInterface({
                 <Conversation className="h-full relative">
                   <ConversationContent className="h-full flex flex-col">
                     <div className="flex-1 mx-auto max-w-3xl w-full px-3 sm:px-6 pb-56 pt-32">
-                      {messages.map((message: any, index: number) => {
+                      {safeMessages.map((message: any, index: number) => {
                         if (message.role === "user") {
                           return (
                             <UserMessage
@@ -496,7 +553,7 @@ export default function ChatInterface({
                         } else {
                           let hasPreviousUserMessage = false;
                           for (let i = index - 1; i >= 0; i--) {
-                            if (messages[i].role === "user") {
+                            if (safeMessages[i].role === "user") {
                               hasPreviousUserMessage = true;
                               break;
                             }

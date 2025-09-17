@@ -22,15 +22,12 @@ export default function Header({ chatId, threadId, toolSidebar }: HeaderProps) {
   return (
     <header
       className={cn(
-        threadId && "border-b",
-        !toolSidebar &&
-          "2xl:border-none 2xl:bg-transparent 2xl:backdrop-blur-none",
-        "bg-background/50 border-foreground/10 backdrop-blur-md absolute top-0 left-0 right-0 z-10 flex justify-between items-center px-2 py-2",
-        "flex-row"
+        "bg-background/50 border-b backdrop-blur-md absolute top-0 left-0 right-0 z-10 flex justify-between items-center px-2",
+        !toolSidebar && "2xl:border-b  bg-background/40 backdrop-blur-md"
       )}
     >
       <div className="flex flex-row items-center gap-2">
-        <SidebarTrigger className="p-3 sm:p-5" />
+        {!toolSidebar && <SidebarTrigger className="p-3 sm:p-5" />}
         <div className="hidden sm:block">
           <ModelSelector />
         </div>

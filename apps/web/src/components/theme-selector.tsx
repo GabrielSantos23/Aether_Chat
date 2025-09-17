@@ -18,7 +18,14 @@ import {
 
 import { useTheme } from "@/hooks/use-theme";
 import { cn } from "@/lib/utils";
-import { MoonIcon, PaintBucket, SunIcon } from "lucide-react";
+import {
+  MoonIcon,
+  PaintBucket,
+  SunIcon,
+  PanelsRightBottom,
+  PanelLeft,
+  RectangleHorizontal,
+} from "lucide-react";
 import { useState } from "react";
 
 export const themes = [
@@ -64,8 +71,10 @@ export function ThemeSelector() {
   const {
     currentTheme,
     currentMode,
+    sidebarVariant,
     handleThemeChange,
     handleModeChange,
+    handleSidebarVariantChange,
     isLoading,
   } = useTheme();
 
@@ -116,6 +125,51 @@ export function ThemeSelector() {
                 <span>Dark</span>
                 <div className="flex-1" />
                 {currentMode === "dark" && (
+                  <span className="text-xs text-muted-foreground">
+                    Selected
+                  </span>
+                )}
+              </CommandItem>
+            </CommandGroup>
+            <CommandSeparator />
+            <CommandGroup heading="Sidebar">
+              <CommandItem
+                value="inset"
+                className="data-[selected=true]:bg-foreground/10 data-[selected=true]:text-foreground"
+                onSelect={() => handleSidebarVariantChange("inset")}
+              >
+                <PanelLeft className="size-4" />
+                <span>Inset</span>
+                <div className="flex-1" />
+                {sidebarVariant === "inset" && (
+                  <span className="text-xs text-muted-foreground">
+                    Selected
+                  </span>
+                )}
+              </CommandItem>
+              <CommandItem
+                value="sidebar"
+                className="data-[selected=true]:bg-foreground/10 data-[selected=true]:text-foreground"
+                onSelect={() => handleSidebarVariantChange("sidebar")}
+              >
+                <PanelsRightBottom className="size-4" />
+                <span>Default</span>
+                <div className="flex-1" />
+                {sidebarVariant === "sidebar" && (
+                  <span className="text-xs text-muted-foreground">
+                    Selected
+                  </span>
+                )}
+              </CommandItem>
+              <CommandItem
+                value="floating"
+                className="data-[selected=true]:bg-foreground/10 data-[selected=true]:text-foreground"
+                onSelect={() => handleSidebarVariantChange("floating")}
+              >
+                <RectangleHorizontal className="size-4" />
+                <span>Floating</span>
+                <div className="flex-1" />
+                {sidebarVariant === "floating" && (
                   <span className="text-xs text-muted-foreground">
                     Selected
                   </span>

@@ -274,8 +274,11 @@ function Sidebar({
         <div
           data-slot="sidebar"
           data-side={side}
+          data-variant={variant}
           className={cn(
             "flex h-full w-(--sidebar-width) flex-col bg-sidebar text-sidebar-foreground",
+            variant === "floating" &&
+              "rounded-lg border border-sidebar-border shadow-sm",
             className
           )}
           {...props}

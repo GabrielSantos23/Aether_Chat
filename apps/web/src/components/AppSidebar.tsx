@@ -10,9 +10,11 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
+  SidebarTrigger,
 } from "./ui/sidebar";
 import { Loader2Icon, PencilIcon, PlusIcon, TrashIcon } from "lucide-react";
 import { Fragment, useState, useEffect } from "react";
+import { useSession } from "next-auth/react";
 import {
   Tooltip,
   TooltipContent,
@@ -33,6 +35,7 @@ import {
 import { Label } from "./ui/label";
 import { Input } from "./ui/input";
 import AetheriaIcon from "./icons/Aether";
+import { useTheme } from "@/hooks/use-theme";
 
 type Chat = {
   _id: Id<"chats">;
@@ -50,9 +53,14 @@ type Chat = {
 export default function AppSidebar() {
   const [chatToEdit, setChatToEdit] = useState<Chat | null>(null);
   const [chatToDelete, setChatToDelete] = useState<Chat | null>(null);
+  const { sidebarVariant, isLoading } = useTheme();
+
+  if (isLoading) {
+    return null;
+  }
 
   return (
-    <Sidebar variant="inset">
+    <Sidebar variant={sidebarVariant} key={sidebarVariant}>
       <AppSidebarHeader />
       <SidebarContent>
         <AppSidebarActions />
@@ -69,12 +77,15 @@ export default function AppSidebar() {
 
 function AppSidebarHeader() {
   return (
-    <SidebarHeader className="p-3">
-      <Button variant="ghost" size="icon" asChild>
-        <Link to="/">
-          <AetheriaIcon className="size-15" />
-        </Link>
-      </Button>
+    <SidebarHeader className="p-3 py-4 border-b ">
+      <div className="flex items-center justify-between">
+        <Button variant="ghost" size="icon" asChild>
+          <Link to="/">
+            <AetheriaIcon className="size-15" />
+          </Link>
+        </Button>
+        <SidebarTrigger />
+      </div>
     </SidebarHeader>
   );
 }
@@ -115,7 +126,29 @@ function AppSidebarChats({
   setChatToEdit: (chat: Chat | null) => void;
   setChatToDelete: (chat: Chat | null) => void;
 }) {
-  const chats = useQuery(api.chat.queries.getUserChats);
+  const { data: session, status } = useSession();
+  const hasConvexToken = !!(session && (session as any).convexToken);
+  const isAuthenticated = status === "authenticated" && hasConvexToken;
+
+  // Add session loading check
+  const isSessionLoading = status === "loading";
+
+  const chats = useQuery(
+    api.chat.queries.getUserChats,
+    isSessionLoading || !isAuthenticated ? "skip" : {}
+  );
+
+  // Show loading during session loading
+  if (isSessionLoading) {
+    return (
+      <div className="p-4">
+        <div className="flex items-center gap-2">
+          <Loader2Icon className="size-4 animate-spin" />
+          <span className="text-sm text-muted-foreground">Loading...</span>
+        </div>
+      </div>
+    );
+  }
 
   if (!chats) {
     return (
@@ -432,6 +465,7 @@ function DeleteChatDialog({
   const [isDeleting, setIsDeleting] = useState(false);
   const deleteChat = useMutation(api.chat.mutations.deleteChat);
   const navigate = useNavigate();
+  const location = useLocation();
 
   const handleDelete = async () => {
     if (!chat) return;
@@ -440,9 +474,15 @@ function DeleteChatDialog({
     try {
       await deleteChat({ chatId: chat._id });
 
-      const currentPath = window.location.pathname;
-      if (currentPath === `/chat/${chat._id}`) {
-        navigate("/chat");
+      // Check if we're currently viewing the chat being deleted
+      const chatId = String(chat._id);
+      const isCurrentlyViewingChat =
+        location.pathname === `/chat/${chatId}` ||
+        location.pathname.startsWith(`/chat/${chatId}/`);
+
+      if (isCurrentlyViewingChat) {
+        // Navigate away immediately to prevent the ChatInterface from continuing to query
+        navigate("/chat", { replace: true });
       }
 
       setChatToDelete(null);

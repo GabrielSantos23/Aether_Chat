@@ -7,18 +7,37 @@ import {
   SidebarTrigger,
 } from "@/components/ui/sidebar";
 import { ModelProvider } from "@/contexts/ModelContext";
-import { useParams } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 import { RightSidebar } from "@/components/right-sidebar";
-import { useQuery } from "convex/react";
+import { useQuery, useConvexAuth } from "convex/react";
+import { useSession } from "next-auth/react";
 import { api } from "@aether-ai-2/backend/convex/_generated/api";
+import { useEffect } from "react";
+import { useTheme } from "@/hooks/use-theme";
+import { cn } from "@/lib/utils";
 
 export default function Chat() {
   const { id } = useParams<{ id?: string }>();
-
+  const navigate = useNavigate();
+  const { data: session, status } = useSession();
+  const { isLoading: isConvexLoading, isAuthenticated: isConvexAuthenticated } =
+    useConvexAuth();
+  const hasConvexToken = !!(session && (session as any).convexToken);
+  const isAuthenticated =
+    status === "authenticated" && hasConvexToken && isConvexAuthenticated;
+  const isSessionLoading = status === "loading" || isConvexLoading;
+  const { sidebarVariant } = useTheme();
   const chat = useQuery(
     api.chat.queries.getChat,
-    id ? { chatId: id as any } : "skip"
+    isSessionLoading || !isAuthenticated || !id ? "skip" : { chatId: id as any }
   );
+
+  useEffect(() => {
+    if (!isSessionLoading && isAuthenticated && id && chat === null) {
+      navigate("/chat", { replace: true });
+    }
+  }, [chat, id, isAuthenticated, isSessionLoading, navigate]);
+
   const pageTitle = chat?.title ? `${chat.title}` : "Aether AI | Chat";
 
   return (
@@ -26,10 +45,10 @@ export default function Chat() {
       <title>{pageTitle}</title>
       <SidebarProvider>
         <AppSidebar />
-        <SidebarInset>
-          <div className="flex flex-col h-screen overflow-hidden">
-            <div className=" rounded-md  w-full  backdrop-blur-sm z-10">
-              <Header />
+        <SidebarInset className={cn(sidebarVariant === "inset" && "border")}>
+          <div className="flex flex-col h-screen overflow-hidden ">
+            <div className="rounded-md w-full backdrop-blur-sm z-10">
+              <Header chatId={id as any} />
             </div>
             <div className="flex-1 overflow-y-hidden">
               <ChatInterface chatId={id as any} />

@@ -3,9 +3,10 @@ import { Input } from "../ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "../ui/popover";
 import { AlignJustify, Search } from "lucide-react";
 import { ScrollArea } from "../ui/scroll-area";
-import { useQuery } from "convex/react";
+import { useQuery, useConvexAuth } from "convex/react";
 import { api } from "@aether-ai-2/backend/convex/_generated/api";
 import { useState, useMemo } from "react";
+import { useSession } from "next-auth/react";
 import type { Id } from "@aether-ai-2/backend/convex/_generated/dataModel";
 
 type Message = {
@@ -70,9 +71,23 @@ interface MessageHistoryProps {
 
 export default function MessageHistory({ chatId }: MessageHistoryProps) {
   const [searchQuery, setSearchQuery] = useState("");
+  const { data: session, status } = useSession();
+  const { isLoading: isConvexLoading, isAuthenticated: isConvexAuthenticated } =
+    useConvexAuth();
+  const hasConvexToken = !!(session && (session as any).convexToken);
+  const isAuthenticated =
+    status === "authenticated" &&
+    !!session?.user &&
+    hasConvexToken &&
+    isConvexAuthenticated;
+
+  // Add a loading state check to prevent queries from running too early
+  const isSessionLoading = status === "loading" || isConvexLoading;
+  const shouldSkipQueries = isSessionLoading || !isAuthenticated || !chatId;
+
   const messages = useQuery(
     api.chat.queries.getChatMessages,
-    chatId ? { chatId } : "skip"
+    shouldSkipQueries ? "skip" : { chatId }
   );
 
   const filteredMessages = useMemo(() => {
@@ -93,19 +108,55 @@ export default function MessageHistory({ chatId }: MessageHistoryProps) {
         behavior: "smooth",
         block: "center",
       });
-      messageElement.classList.add("ring-2", "ring-primary", "ring-opacity-50");
+      messageElement.classList.add(
+        "ring/10",
+        "ring-primary/50",
+        "ring-opacity-50",
+        "rounded-2xl"
+      );
       setTimeout(() => {
         messageElement.classList.remove(
-          "ring-2",
-          "ring-primary",
+          "ring",
+          "ring-primary/50",
           "ring-opacity-50"
         );
       }, 2000);
     }
   };
 
+  // Show loading state during session loading
+  if (isSessionLoading) {
+    return (
+      <Popover>
+        <PopoverTrigger asChild className="bg-background border">
+          <Button variant="ghost" disabled>
+            <AlignJustify />
+          </Button>
+        </PopoverTrigger>
+        <PopoverContent className="w-80">
+          <div className="p-3 text-center text-muted-foreground text-sm">
+            Loading...
+          </div>
+        </PopoverContent>
+      </Popover>
+    );
+  }
+
   if (!chatId) {
-    return null;
+    return (
+      <Popover>
+        <PopoverTrigger asChild className="bg-background border">
+          <Button variant="ghost" disabled>
+            <AlignJustify />
+          </Button>
+        </PopoverTrigger>
+        <PopoverContent className="w-80">
+          <div className="p-3 text-center text-muted-foreground text-sm">
+            No chat selected
+          </div>
+        </PopoverContent>
+      </Popover>
+    );
   }
 
   return (

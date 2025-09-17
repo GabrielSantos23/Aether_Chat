@@ -1,42 +1,52 @@
 "use client";
 
-import { ConvexProvider, ConvexReactClient } from "convex/react";
+import { ConvexProviderWithAuth, ConvexReactClient } from "convex/react";
 import { ThemeProvider } from "./theme-provider";
 import { Toaster } from "./ui/sonner";
-import { SessionProvider } from "next-auth/react";
-import { useSession } from "next-auth/react";
-import { useEffect } from "react";
+import { SessionProvider, useSession } from "next-auth/react";
+import { useCallback, useMemo } from "react";
 import { SidebarProvider } from "@/contexts/sidebar-context";
+import { AppThemeProvider } from "@/contexts/theme-context";
 
 const convex = new ConvexReactClient(process.env.NEXT_PUBLIC_CONVEX_URL!);
 
-function ConvexClientProvider({ children }: { children: React.ReactNode }) {
-  const { data: session } = useSession();
+function useAuthFromNextAuth() {
+  const { data: session, status } = useSession();
 
-  useEffect(() => {
-    if (session && "convexToken" in session && session.convexToken) {
-      convex.setAuth(() => Promise.resolve(session.convexToken as string));
-    } else {
-      convex.clearAuth();
-    }
-  }, [session]);
+  const fetchAccessToken = useCallback(
+    async ({ forceRefreshToken }: { forceRefreshToken: boolean }) => {
+      const token = (session as any)?.convexToken ?? null;
+      return token ?? null;
+    },
+    [session]
+  );
 
-  return <ConvexProvider client={convex}>{children}</ConvexProvider>;
+  return useMemo(
+    () => ({
+      isLoading: status === "loading",
+      isAuthenticated:
+        status === "authenticated" && !!(session as any)?.convexToken,
+      fetchAccessToken,
+    }),
+    [status, session, fetchAccessToken]
+  );
 }
 
 export default function Providers({ children }: { children: React.ReactNode }) {
   return (
-    <SessionProvider>
+    <SessionProvider refetchOnWindowFocus={false} refetchInterval={0}>
       <ThemeProvider
         attribute="class"
         defaultTheme="system"
         enableSystem
         disableTransitionOnChange
       >
-        <ConvexClientProvider>
-          <SidebarProvider>{children}</SidebarProvider>
-        </ConvexClientProvider>
-        <Toaster position="top-center" />
+        <AppThemeProvider>
+          <ConvexProviderWithAuth client={convex} useAuth={useAuthFromNextAuth}>
+            <SidebarProvider>{children}</SidebarProvider>
+          </ConvexProviderWithAuth>
+          <Toaster position="top-center" />
+        </AppThemeProvider>
       </ThemeProvider>
     </SessionProvider>
   );
