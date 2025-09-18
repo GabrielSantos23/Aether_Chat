@@ -168,7 +168,7 @@ export const AIMessage = memo(function AIMessage({
                 urls={urls}
                 count={urls.length}
                 label={urls.length === 1 ? "source" : "sources"}
-                onClick={() => {}}
+                toolCalls={message.toolCalls}
               />
             </div>
           )}

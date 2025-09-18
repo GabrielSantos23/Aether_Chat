@@ -53,6 +53,9 @@ import { AIMessage } from "./ai-elements/ai-message";
 import { toast } from "sonner";
 import { ProDialog } from "./pro-dialog";
 import { PromptInputComponent } from "./PromptInputComponent";
+import EmptyChatSuggestions, {
+  ChatSuggestions,
+} from "./ai-elements/ChatSuggestions";
 
 const PromptInputContext = createContext<{
   attachedFiles: Array<{
@@ -435,6 +438,14 @@ export default function ChatInterface({
     return undefined;
   }, [isLoading]);
 
+  const handleSuggestionPick = useCallback(
+    (suggestedText: string, suggestedTool?: string) => {
+      if (suggestedTool) setTool(suggestedTool);
+      setText(suggestedText);
+    },
+    []
+  );
+
   const shouldShowBanner = match({
     editingMessageId,
     remainingCredits,
@@ -640,6 +651,21 @@ export default function ChatInterface({
               handleUploadThingComplete={handleUploadThingComplete}
               isUploading={isUploading}
             />
+
+            {!hasMessages && !currentChatId && (
+              <div className="absolute left-0 right-0 top-1/2  z-0">
+                <ChatSuggestions
+                  tool={tool}
+                  isUnauthenticated={isUnauthenticated}
+                  canModelUseTools={canModelUseTools}
+                  canSearch={canSearch}
+                  canResearch={canResearch}
+                  remainingSearches={remainingSearches}
+                  remainingResearches={remainingResearches}
+                  onPick={handleSuggestionPick}
+                />
+              </div>
+            )}
           </div>
         </TooltipProvider>
 

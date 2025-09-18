@@ -17,7 +17,7 @@ interface SourcesButtonProps {
 
 export function SourcesButton({ toolCalls }: SourcesButtonProps) {
   const [isHovered, setIsHovered] = useState(false);
-  const { openSearchSidebar } = useSidebar();
+  const { openSearchSidebar, isOpen, closeSidebar } = useSidebar();
 
   const searchToolCalls =
     toolCalls?.filter((tc) => tc.toolName === "webSearch") || [];
@@ -38,7 +38,11 @@ export function SourcesButton({ toolCalls }: SourcesButtonProps) {
   const query = searchCall?.args?.query || "Search";
 
   const handleClick = () => {
-    openSearchSidebar(searchResults, query);
+    if (isOpen) {
+      closeSidebar();
+    } else {
+      openSearchSidebar(searchResults, query);
+    }
   };
 
   return (
