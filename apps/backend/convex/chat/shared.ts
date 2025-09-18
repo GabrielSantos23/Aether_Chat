@@ -93,7 +93,6 @@ export const advancedWebSearchTool = tool({
   },
 });
 
-// Updated image generation tool using the official AI SDK
 export const imageGenerationTool = tool({
   description:
     "Generate high-quality images based on detailed text descriptions using AI models",
@@ -130,7 +129,6 @@ export const imageGenerationTool = tool({
     n = 1,
   }) => {
     try {
-      // Enhance prompt with style
       const enhancedPrompt =
         style !== "realistic" ? `${prompt} in ${style} style` : prompt;
 
@@ -147,7 +145,6 @@ export const imageGenerationTool = tool({
         },
       });
 
-      // Handle single or multiple images
       if ("image" in result) {
         return {
           success: true,
@@ -191,7 +188,6 @@ export const imageGenerationTool = tool({
   },
 });
 
-// Alternative tool for Google Vertex AI (Imagen)
 export const imagenGenerationTool = tool({
   description:
     "Generate images using Google's Imagen model with aspect ratio control",
@@ -214,14 +210,9 @@ export const imagenGenerationTool = tool({
   }),
   execute: async ({ prompt, aspectRatio = "1:1", n = 1 }) => {
     try {
-      // You would need to set up Google Vertex AI provider
-      // const vertex = createGoogleVertexAI({ ... });
-
       const result: any = await generateImage({
-        // model: vertex.image('imagen-3.0-generate-002'),
-        model: openai.image("dall-e-3"), // Fallback to OpenAI for now
+        model: openai.image("dall-e-3"),
         prompt: prompt,
-        // aspectRatio: aspectRatio, // Only available with Imagen
         n: n,
       });
 
@@ -629,7 +620,6 @@ export const generateAIResponse = async (
               typeof delta.text === "string" ? delta.text : "";
             if (reasoningText) {
               accumulatedThinking += reasoningText;
-              // Only update thinking every 50 characters to reduce overhead
               if (accumulatedThinking.length % 50 === 0) {
                 await scheduleUpdate({ thinking: accumulatedThinking });
               }

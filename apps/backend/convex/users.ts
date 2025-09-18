@@ -353,12 +353,10 @@ async function resolveOrCreateCurrentUserId(
     }
   }
 
-  // Check if we're in a query context (read-only)
   if ("query" in ctx.db && !("insert" in ctx.db)) {
     return null;
   }
 
-  // We're in a mutation context, can create the user
   const email = identity.email || "user@example.com";
 
   const userId: Id<"users"> = await ctx.db.insert("users", {

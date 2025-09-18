@@ -302,7 +302,6 @@ export const sendMessage = action({
         });
       }
 
-      // Add the user message for non-attachment cases
       chatMessages.push({
         role: "user" as const,
         content: message,
@@ -370,7 +369,6 @@ export const generateTitle = action({
     retryCount: v.optional(v.number()),
   },
   handler: async (ctx, { chatId, messageContent, modelId, retryCount }) => {
-    // Heuristic fallback title from the first user message
     const heuristicTitle = () => {
       const words = messageContent
         .replace(/[\n\r]+/g, " ")
@@ -398,7 +396,6 @@ export const generateTitle = action({
       }
 
       const google = createGoogleGenerativeAI({ apiKey: envApiKey });
-      // Prefer the requested model but default to fast one
       const modelToUse =
         modelId && modelId.startsWith("gemini")
           ? modelId
@@ -432,7 +429,6 @@ export const generateTitle = action({
         status === 503 ||
         Boolean(error?.isRetryable);
 
-      // Exponential backoff via scheduler, keep isGeneratingTitle=true until success or final fallback
       if (isOverloaded && attempt < 5) {
         const delayMs = Math.min(30000, 2000 * Math.pow(2, attempt - 1));
         await ctx.scheduler.runAfter(delayMs, api.chat.actions.generateTitle, {
@@ -444,7 +440,6 @@ export const generateTitle = action({
         return;
       }
 
-      // Final fallback: set a deterministic title and clear generating flag
       await ctx.runMutation(api.chat.mutations.updateChatTitle, {
         chatId,
         title: heuristicTitle(),

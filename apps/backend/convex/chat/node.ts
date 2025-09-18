@@ -50,11 +50,9 @@ export const sendMessage = action({
       if (file.type.startsWith("image")) {
         return "image";
       }
-      // For now, only support images. Other file types will be mentioned in text
       return "unsupported";
     };
 
-    // Separate images from other files
     const imageFiles = attachments.filter((file) =>
       file.type.startsWith("image")
     );
@@ -62,7 +60,6 @@ export const sendMessage = action({
       (file) => !file.type.startsWith("image")
     );
 
-    // Build content array
     const content: any[] = [
       {
         type: "text",
@@ -70,7 +67,6 @@ export const sendMessage = action({
       },
     ];
 
-    // Add image attachments
     if (imageFiles.length > 0) {
       content.push(
         ...imageFiles.map((file) => ({
@@ -80,7 +76,6 @@ export const sendMessage = action({
       );
     }
 
-    // Add text about other files
     if (otherFiles.length > 0) {
       const fileNames = otherFiles.map((f) => f.name).join(", ");
       content.push({

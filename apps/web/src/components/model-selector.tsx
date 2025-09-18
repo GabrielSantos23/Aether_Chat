@@ -79,7 +79,6 @@ export default function ModelSelector() {
 
   useEffect(() => {}, [selectedModelId, selectedModel]);
 
-  // For unauthenticated users, show all available models but make them non-selectable
   const availableModels = isUnauthenticated ? sharedModels : enabledModelsList;
   const pinnedModels = availableModels.filter((model) =>
     pinnedModelIds.includes(model.id)

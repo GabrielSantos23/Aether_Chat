@@ -36,11 +36,9 @@ export const upsertAccount = mutation({
     session_state: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    // Ensure the caller is authenticated and resolve a Convex userId from identity
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) throw new Error("Not authenticated");
 
-    // Try to find existing user by email; create if missing
     let userId: Id<"users"> | null = null;
     let existingUser: any = null;
     if (identity.email) {
@@ -66,7 +64,6 @@ export const upsertAccount = mutation({
       }
       userId = await ctx.db.insert("users", newUser);
     } else {
-      // Update existing user with latest profile fields if changed
       const updates: Partial<{ name: string; image: string }> = {};
       if (
         typeof identity.name === "string" &&
@@ -85,7 +82,6 @@ export const upsertAccount = mutation({
       }
     }
 
-    // Insert or update existing account by composite key (provider, providerAccountId)
     const existing = await ctx.db
       .query("accounts")
       .withIndex("providerAndAccountId", (q) =>

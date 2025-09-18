@@ -48,14 +48,11 @@ export function ModelProvider({ children }: { children: ReactNode }) {
             Array.isArray(parsedEnabledModels) &&
             parsedEnabledModels.length > 0
           ) {
-            // Merge saved list with current models so newly added models appear by default
             const currentModelIds = new Set(models.map((m) => m.id));
             const merged = new Set<string>();
-            // Keep only valid saved ids that still exist
             for (const id of parsedEnabledModels) {
               if (currentModelIds.has(id)) merged.add(id);
             }
-            // Add any new model ids that weren't present when the user saved settings
             for (const id of currentModelIds) {
               if (!merged.has(id)) merged.add(id);
             }

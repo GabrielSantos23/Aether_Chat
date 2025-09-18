@@ -3,7 +3,6 @@
 import { cn } from "@/lib/utils";
 
 import { VStack } from "@/components/ui/stack";
-// import { Logo } from "@/components/ui/logo";
 import { AuthButtons } from "./auth-buttons";
 import { useSearchParams } from "next/navigation";
 import { Card } from "@/components/ui/card";

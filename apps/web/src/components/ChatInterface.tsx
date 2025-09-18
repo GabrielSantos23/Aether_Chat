@@ -80,8 +80,6 @@ const PromptInputContext = createContext<{
   onUploadThingComplete: () => {},
 });
 
-// Define props for the extracted component
-
 interface ChatInterfaceProps {
   chatId?: Id<"chats">;
   className?: string;
@@ -178,7 +176,6 @@ export default function ChatInterface({
     hasConvexToken &&
     isConvexAuthenticated;
 
-  // Add a loading state check to prevent queries from running too early
   const isSessionLoading = status === "loading" || isConvexLoading;
   const shouldSkipQueries =
     isSessionLoading || !isAuthenticated || !currentChatId;
@@ -196,7 +193,6 @@ export default function ChatInterface({
     shouldSkipMessages ? "skip" : { chatId: currentChatId }
   );
 
-  // Handle case where chat is deleted while viewing
   useEffect(() => {
     if (
       !isSessionLoading &&
@@ -204,7 +200,6 @@ export default function ChatInterface({
       currentChatId &&
       chat === null
     ) {
-      // Chat was deleted or access denied, redirect to new chat
       router.push("/chat");
     }
   }, [chat, currentChatId, isAuthenticated, isSessionLoading, router]);
@@ -228,7 +223,6 @@ export default function ChatInterface({
   const hasMessages = (messages?.length ?? 0) > 0;
   const safeMessages = messages ?? [];
 
-  // If chat is null but we have a chatId, it means chat was deleted or access denied
   const chatDeleted = currentChatId && chat === null && !isSessionLoading;
 
   const isUnauthenticated = status === "unauthenticated" || !session?.user;
@@ -283,7 +277,6 @@ export default function ChatInterface({
 
       setAttachedFiles((prev) => [...prev, ...previewFiles]);
 
-      // Simulate upload progress
       for (let i = 0; i <= 100; i += 10) {
         await new Promise((resolve) => setTimeout(resolve, 100));
         setAttachedFiles((prev) =>
@@ -295,7 +288,6 @@ export default function ChatInterface({
         );
       }
 
-      // Mark upload as complete
       setAttachedFiles((prev) =>
         prev.map((file, index) =>
           index >= prev.length - previewFiles.length
@@ -495,7 +487,6 @@ export default function ChatInterface({
     .with({ editingMessageId: P.string }, () => true)
     .otherwise(() => false);
 
-  // Show loading state during session loading
   if (isSessionLoading) {
     return (
       <div className="flex flex-col h-full">

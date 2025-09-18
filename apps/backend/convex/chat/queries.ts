@@ -1,4 +1,3 @@
-// QUERIES - for real-time subscriptions
 import { action, mutation, query } from "../_generated/server";
 import { api } from "../_generated/api";
 import { v } from "convex/values";
@@ -9,7 +8,6 @@ import { getOrCreateUserId } from "./shared";
 export const getChatMessages = query({
   args: { chatId: v.id("chats") },
   handler: async (ctx, { chatId }) => {
-    // Check authentication
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) {
       throw new Error("Authentication required");
@@ -24,13 +22,11 @@ export const getChatMessages = query({
       throw new Error("User not found");
     }
 
-    // Verify chat ownership
     const chat = await ctx.db.get(chatId);
     if (!chat || chat.userId !== userId) {
       throw new Error("Chat not found or access denied");
     }
 
-    // Get messages ordered by creation time
     const messages = await ctx.db
       .query("messages")
       .withIndex("by_chat_created", (q) => q.eq("chatId", chatId))
@@ -63,7 +59,6 @@ export const getMessage = query({
       throw new Error("User not found");
     }
 
-    // Verify chat ownership
     const chat = await ctx.db.get(message.chatId);
     if (!chat || chat.userId !== userId) {
       throw new Error("Access denied");
@@ -81,14 +76,13 @@ export const getUserChats = query({
       return [];
     }
 
-    // Get the user ID
     const userId = await getOrCreateUserId(
       ctx,
       identity.tokenIdentifier,
       identity.email
     );
     if (!userId) {
-      return []; // Return empty array if user not found
+      return [];
     }
 
     const chats = await ctx.db
@@ -109,19 +103,18 @@ export const getChat = query({
       return null;
     }
 
-    // Get the user ID
     const userId = await getOrCreateUserId(
       ctx,
       identity.tokenIdentifier,
       identity.email
     );
     if (!userId) {
-      return null; // Return null if user not found
+      return null;
     }
 
     const chat = await ctx.db.get(chatId);
     if (!chat || chat.userId !== userId) {
-      return null; // Return null instead of throwing error
+      return null;
     }
 
     return chat;

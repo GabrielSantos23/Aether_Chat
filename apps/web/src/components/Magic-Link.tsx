@@ -6,9 +6,7 @@ export function MagicLink() {
   const navigate = useNavigate();
 
   const handleTryAnotherEmail = () => {
-    // Reset the email sent state and go back to login
     navigate("/login", { replace: true });
-    // Force a page reload to reset the component state
     window.location.reload();
   };
 

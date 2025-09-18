@@ -135,7 +135,6 @@ function AppSidebarChats({
   const hasConvexToken = !!(session && (session as any).convexToken);
   const isAuthenticated = status === "authenticated" && hasConvexToken;
 
-  // Add session loading check
   const isSessionLoading = status === "loading";
 
   const chats = useQuery(
@@ -143,7 +142,6 @@ function AppSidebarChats({
     isSessionLoading || !isAuthenticated ? "skip" : {}
   );
 
-  // Show loading during session loading
   if (isSessionLoading) {
     return (
       <div className="p-4">
@@ -151,6 +149,16 @@ function AppSidebarChats({
           <Loader2Icon className="size-4 animate-spin" />
           <span className="text-sm text-muted-foreground">Loading...</span>
         </div>
+      </div>
+    );
+  }
+
+  if (!isAuthenticated) {
+    return (
+      <div className="p-4">
+        <p className="text-sm text-muted-foreground/50">
+          Sign in to view your chats.
+        </p>
       </div>
     );
   }
@@ -479,14 +487,12 @@ function DeleteChatDialog({
     try {
       await deleteChat({ chatId: chat._id });
 
-      // Check if we're currently viewing the chat being deleted
       const chatId = String(chat._id);
       const isCurrentlyViewingChat =
         location.pathname === `/chat/${chatId}` ||
         location.pathname.startsWith(`/chat/${chatId}/`);
 
       if (isCurrentlyViewingChat) {
-        // Navigate away immediately to prevent the ChatInterface from continuing to query
         navigate("/chat", { replace: true });
       }
 

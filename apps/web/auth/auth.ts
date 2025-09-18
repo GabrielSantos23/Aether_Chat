@@ -182,7 +182,6 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         )
           return;
 
-        // Create a short-lived Convex token for this server-side call
         const CONVEX_SITE_URL = process.env.NEXT_PUBLIC_CONVEX_URL.replace(
           /.cloud$/,
           ".site"

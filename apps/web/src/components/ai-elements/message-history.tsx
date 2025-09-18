@@ -81,7 +81,6 @@ export default function MessageHistory({ chatId }: MessageHistoryProps) {
     hasConvexToken &&
     isConvexAuthenticated;
 
-  // Add a loading state check to prevent queries from running too early
   const isSessionLoading = status === "loading" || isConvexLoading;
   const shouldSkipQueries = isSessionLoading || !isAuthenticated || !chatId;
 
@@ -124,7 +123,6 @@ export default function MessageHistory({ chatId }: MessageHistoryProps) {
     }
   };
 
-  // Show loading state during session loading
   if (isSessionLoading) {
     return (
       <Popover>
