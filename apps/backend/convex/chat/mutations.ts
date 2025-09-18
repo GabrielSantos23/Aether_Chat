@@ -5,6 +5,13 @@ import { Id } from "../_generated/dataModel";
 import { MutationCtx, QueryCtx } from "../_generated/server";
 import { getOrCreateUserId } from "./shared";
 import { models } from "../../../../apps/web/src/lib/models";
+import {
+  validateMessageContent,
+  validateMessageRole,
+  validateAttachments,
+  validateToolCalls,
+  validateChatTitle,
+} from "../lib/validation";
 
 export const createChat = mutation({
   args: {
@@ -26,10 +33,13 @@ export const createChat = mutation({
       throw new Error("User not found or could not be created");
     }
 
+    // Validate title if provided
+    const validatedTitle = title ? validateChatTitle(title) : "New chat";
+
     const now = Date.now();
     const chatId = await ctx.db.insert("chats", {
       userId,
-      title: title || "New chat",
+      title: validatedTitle,
       createdAt: now,
       updatedAt: now,
       isGeneratingTitle: false,
@@ -87,6 +97,22 @@ export const addMessage = mutation({
       throw new Error("User not found or could not be created");
     }
 
+    // Validate input data
+    const validatedRole = validateMessageRole(role);
+    const validatedContent = validateMessageContent(content);
+    const validatedAttachments = attachments
+      ? validateAttachments(attachments)
+      : undefined;
+
+    // Allow empty content for assistant messages or when there are attachments
+    if (
+      validatedContent === "" &&
+      validatedRole === "user" &&
+      !validatedAttachments?.length
+    ) {
+      throw new Error("User messages must have content or attachments");
+    }
+
     const chat = await ctx.db.get(chatId);
     if (!chat) {
       throw new Error("Chat not found");
@@ -96,7 +122,7 @@ export const addMessage = mutation({
       throw new Error("Access denied");
     }
 
-    if (modelId && role === "assistant") {
+    if (modelId && validatedRole === "assistant") {
       const modelInfo = models.find((m: any) => m.id === modelId);
       if (modelInfo && modelInfo.isApiKeyOnly) {
         const userKeys = await ctx.db
@@ -145,8 +171,8 @@ export const addMessage = mutation({
 
     const messageData: any = {
       chatId,
-      role,
-      content,
+      role: validatedRole,
+      content: validatedContent,
       modelId,
       thinking,
       thinkingDuration,
@@ -154,12 +180,12 @@ export const addMessage = mutation({
       isComplete: isComplete ?? true,
     };
 
-    if (attachments) {
-      messageData.attachments = attachments;
+    if (validatedAttachments) {
+      messageData.attachments = validatedAttachments;
     }
 
     if (
-      role === "user" &&
+      validatedRole === "user" &&
       chat.title === "New chat" &&
       !chat.isGeneratingTitle
     ) {
@@ -173,7 +199,7 @@ export const addMessage = mutation({
         await ctx.db.patch(chatId, { isGeneratingTitle: true });
         await ctx.scheduler.runAfter(0, api.chat.actions.generateTitle, {
           chatId,
-          messageContent: content,
+          messageContent: validatedContent,
           modelId: modelId || "gemini-2.0-flash-lite",
         });
       }
@@ -245,14 +271,21 @@ export const updateMessage = mutation({
       throw new Error("Access denied");
     }
 
+    // Validate input data
+    const validatedContent =
+      content !== undefined ? validateMessageContent(content) : undefined;
+    const validatedToolCalls =
+      toolCalls !== undefined ? validateToolCalls(toolCalls) : undefined;
+
     const updateData: any = {};
-    if (content !== undefined) updateData.content = content;
+    if (validatedContent !== undefined) updateData.content = validatedContent;
     if (thinking !== undefined) updateData.thinking = thinking;
     if (thinkingDuration !== undefined)
       updateData.thinkingDuration = thinkingDuration;
     if (isComplete !== undefined) updateData.isComplete = isComplete;
     if (isCancelled !== undefined) updateData.isCancelled = isCancelled;
-    if (toolCalls !== undefined) updateData.toolCalls = toolCalls;
+    if (validatedToolCalls !== undefined)
+      updateData.toolCalls = validatedToolCalls;
 
     await ctx.db.patch(messageId, updateData);
 
@@ -371,6 +404,9 @@ export const editMessage = mutation({
       identity.tokenIdentifier,
       identity.email
     );
+
+    const validatedContent = validateMessageContent(content);
+
     const message = await ctx.db.get(messageId);
     if (!message) {
       throw new Error("Message not found");
@@ -385,7 +421,7 @@ export const editMessage = mutation({
       throw new Error("Only user messages can be edited");
     }
 
-    await ctx.db.patch(messageId, { content });
+    await ctx.db.patch(messageId, { content: validatedContent });
 
     await ctx.db.patch(message.chatId, {
       updatedAt: Date.now(),
@@ -684,12 +720,15 @@ export const renameChat = mutation({
       identity.email
     );
 
+    // Validate title
+    const validatedTitle = validateChatTitle(title);
+
     const chat = await ctx.db.get(chatId);
     if (!chat || chat.userId !== userId) {
       throw new Error("Chat not found or access denied");
     }
 
-    await ctx.db.patch(chatId, { title });
+    await ctx.db.patch(chatId, { title: validatedTitle });
   },
 });
 

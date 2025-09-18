@@ -5,6 +5,7 @@ import { SearchPart } from "./search-part";
 import { ReasoningPart } from "./reasoning-part";
 import { TextPart } from "./text-part";
 import { ErrorPart } from "./error-part";
+import { ToolCall } from "@/lib/types";
 
 interface PartProps {
   id: string;
@@ -12,7 +13,7 @@ interface PartProps {
   type: string;
   toolCallId?: string;
   done?: boolean;
-  toolCall?: any;
+  toolCall?: ToolCall;
   onToggleSidebar?: () => void;
   isSidebarOpen?: boolean;
 }

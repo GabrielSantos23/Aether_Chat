@@ -10,12 +10,13 @@ import { Globe, MapPin, Clock } from "lucide-react";
 import { UserProfileCards } from "@/components/UserProfileCards";
 import { useMutation, useQuery } from "convex/react";
 import { api } from "@aether-ai-2/backend/convex/_generated/api";
+import { SessionItem } from "@/lib/types";
 
-function getUsername(user?: any) {
+function getUsername(user?: { name?: string; username?: string }) {
   return user?.name || user?.username || "";
 }
 
-function getDeviceInfo(sessionItem: any) {
+function getDeviceInfo(sessionItem: SessionItem) {
   if (sessionItem.platform) {
     return `${sessionItem.platform} Device`;
   }
@@ -29,7 +30,7 @@ function getDeviceInfo(sessionItem: any) {
   return "Web Session";
 }
 
-function getDeviceIcon(sessionItem: any) {
+function getDeviceIcon(sessionItem: SessionItem) {
   if (sessionItem.platform === "Windows") return "🪟";
   if (sessionItem.platform === "macOS") return "🍎";
   if (sessionItem.platform === "Linux") return "🐧";
@@ -151,7 +152,7 @@ export default function AccountDashboard() {
                 <p>No active sessions found</p>
               </div>
             ) : (
-              sessions.map((sessionItem: any) => {
+              sessions.map((sessionItem: SessionItem) => {
                 const isCurrentSession = false;
                 const deviceInfo = getDeviceInfo(sessionItem);
                 const deviceIcon = getDeviceIcon(sessionItem);

@@ -207,19 +207,24 @@ export class TavilyClient {
     return Promise.all(promises);
   }
 
-  private normalizeResults(results: any[]): TavilySearchResult[] {
+  private normalizeResults(results: unknown[]): TavilySearchResult[] {
     return results
       .filter((result) => result && typeof result === "object")
-      .map((result) => ({
-        title: this.sanitizeString(result.title || "Untitled"),
-        url: this.validateUrl(result.url) || "",
-        content: this.sanitizeString(result.content || ""),
-        score:
-          typeof result.score === "number"
-            ? Math.max(0, Math.min(1, result.score))
-            : 0,
-        published_date: result.published_date || undefined,
-      }))
+      .map((result) => {
+        const typedResult = result as Record<string, unknown>;
+        return {
+          title: this.sanitizeString(
+            (typedResult.title as string) || "Untitled"
+          ),
+          url: this.validateUrl((typedResult.url as string) || "") || "",
+          content: this.sanitizeString((typedResult.content as string) || ""),
+          score:
+            typeof typedResult.score === "number"
+              ? Math.max(0, Math.min(1, typedResult.score))
+              : 0,
+          published_date: (typedResult.published_date as string) || undefined,
+        };
+      })
       .filter((result) => result.url && result.content);
   }
 

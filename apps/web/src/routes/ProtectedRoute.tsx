@@ -1,7 +1,7 @@
 import { Navigate, Outlet } from "react-router-dom";
 import { useQuery } from "convex/react";
 import { useSession } from "next-auth/react";
-import { api } from "../../../backend/convex/_generated/api";
+import { api } from "@backend/convex/_generated/api";
 import { CircularLoader } from "@/components/ui/loader";
 
 const ProtectedRoute = () => {

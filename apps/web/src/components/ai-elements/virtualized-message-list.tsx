@@ -5,9 +5,10 @@ import { useVirtualizer } from "@tanstack/react-virtual";
 import { useRef } from "react";
 import { AIMessage } from "./ai-message";
 import { UserMessage } from "./user-message";
+import { Message as MessageType } from "@/lib/types";
 
 interface VirtualizedMessageListProps {
-  messages: any[];
+  messages: MessageType[];
   onUserMessageEdit: (messageId: string, content: string) => void;
   onAIMessageRegenerate: (messageIndex: number) => void;
   className?: string;

@@ -1,6 +1,6 @@
 import type { GenericActionCtx } from "convex/server";
-import type { Tool } from "../../../../backend/convex/ai/schema";
-import type { Doc } from "../../../../backend/convex/_generated/dataModel";
+import type { Tool } from "@backend/convex/ai/schema";
+import type { Doc } from "@backend/convex/_generated/dataModel";
 
 export function getPrompt(opts: {
   ctx: GenericActionCtx<any>;
@@ -112,7 +112,10 @@ export function getResearchPlanPrompt(topic: string) {
   `;
 }
 
-export function getResearchPrompt(plan: any, totalTodos: number) {
+export function getResearchPrompt(
+  plan: { todos: Array<{ text: string; completed: boolean }> },
+  totalTodos: number
+) {
   return `
     You are an autonomous deep research analyst. Your goal is to research the given research plan thoroughly with the given tools.
 

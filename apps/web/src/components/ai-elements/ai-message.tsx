@@ -20,22 +20,20 @@ import { models as availableModels } from "@/components/models";
 import ModelIcon, { type ModelType } from "@/components/icons/model-icon";
 import { toast } from "sonner";
 import { PendingMessage } from "./pending-message";
-import { SearchTool } from "./search-tool";
-import { Part } from "./part";
-import { SourcesButton } from "../sources-button";
-import { ResearchButton } from "../research-button";
-import { UrlResultButton } from "../url-result-button";
+import { SourcesButton } from "@/components/sources-button";
+import { ResearchButton } from "@/components/research-button";
+import { UrlResultButton } from "@/components/url-result-button";
 import {
   isLoading,
-  isStreaming,
   hasThinking,
   hasTools,
   isReasoningStreaming,
   getSearchUrls,
 } from "@/lib/message-state-utils";
+import { type Message as MessageType } from "@/lib/types";
 
 interface AIMessageProps {
-  message: any;
+  message: MessageType;
   onRegenerate?: () => void;
   canRegenerate?: boolean;
 }
@@ -60,16 +58,15 @@ export const AIMessage = memo(function AIMessage({
   // Use centralized state predicates
   const messageState = useMemo(
     () => ({
-      isComplete: message.isComplete,
+      isComplete: message.isComplete ?? false,
       content: message.content,
-      thinking: message.thinking,
-      toolCalls: message.toolCalls,
+      thinking: message.thinking ?? "",
+      toolCalls: message.toolCalls ?? [],
     }),
     [message.isComplete, message.content, message.thinking, message.toolCalls]
   );
 
   const messageIsLoading = isLoading(messageState);
-  const messageIsStreaming = isStreaming(messageState);
   const messageHasThinking = hasThinking(messageState);
   const messageHasTools = hasTools(messageState);
   const messageIsReasoningStreaming = isReasoningStreaming(messageState);
@@ -141,8 +138,8 @@ export const AIMessage = memo(function AIMessage({
         <div className="space-y-2 sm:space-y-3">
           {messageHasTools && (
             <div className="space-y-2">
-              <SourcesButton toolCalls={message.toolCalls} />
-              <ResearchButton toolCalls={message.toolCalls} />
+              <SourcesButton toolCalls={message.toolCalls ?? []} />
+              <ResearchButton toolCalls={message.toolCalls ?? []} />
             </div>
           )}
 
@@ -155,7 +152,7 @@ export const AIMessage = memo(function AIMessage({
                 <ReasoningTrigger className="hover:text-foreground text-muted-foreground cursor-pointer" />
 
                 <ReasoningContent className="whitespace-pre-wrap text-muted-foreground bg-sidebar rounded-md border px-2">
-                  {message.thinking}
+                  {message.thinking || ""}
                 </ReasoningContent>
               </Reasoning>
             </div>
@@ -169,7 +166,7 @@ export const AIMessage = memo(function AIMessage({
 
           {message.attachments && message.attachments.length > 0 && (
             <div className="space-y-2">
-              {message.attachments.map((attachment: any, index: number) => (
+              {message.attachments.map((attachment, index: number) => (
                 <img
                   key={index}
                   src={attachment.url}
@@ -187,7 +184,7 @@ export const AIMessage = memo(function AIMessage({
                 urls={searchData.urls}
                 count={searchData.urls.length}
                 label={searchData.urls.length === 1 ? "source" : "sources"}
-                toolCalls={message.toolCalls}
+                toolCalls={message.toolCalls ?? []}
               />
             </div>
           )}

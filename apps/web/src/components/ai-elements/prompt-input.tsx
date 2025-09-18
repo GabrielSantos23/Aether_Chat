@@ -11,6 +11,7 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 import type { ChatStatus } from "ai";
+import { UploadedFile } from "@/lib/types";
 import {
   Loader2Icon,
   SendIcon,
@@ -278,7 +279,7 @@ type PromptInputContextType = {
   ) => void;
   onFileUpload?: (files: FileList | null) => void;
   onRemoveFile?: (index: number) => void;
-  onUploadThingComplete?: (files: any[]) => void;
+  onUploadThingComplete?: (files: UploadedFile[]) => void;
 };
 
 const PromptInputContext = createContext<PromptInputContextType>({
@@ -426,7 +427,7 @@ export type PromptInputFileUploadProps = {
   accept?: string;
   multiple?: boolean;
   onFileSelect?: (files: FileList | null) => void;
-  onUploadComplete?: (files: any[]) => void;
+  onUploadComplete?: (files: UploadedFile[]) => void;
   onUploadError?: (error: Error) => void;
   onUploadProgress?: (progress: number) => void;
   className?: string;
@@ -447,7 +448,7 @@ export function PromptInputFileUpload({
     setIsUploading(true);
   };
 
-  const handleUploadComplete = (res: any[]) => {
+  const handleUploadComplete = (res: UploadedFile[]) => {
     setIsUploading(false);
     onUploadComplete?.(res);
   };

@@ -1,30 +1,19 @@
 import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Card } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { useTheme } from "@/hooks/use-theme";
-import {
-  Brain,
-  Mail,
-  Loader2,
-  ArrowRightIcon,
-  GithubIcon,
-  CheckCircle,
-  Github,
-} from "lucide-react";
+import { Mail, Loader2, CheckCircle, Github } from "lucide-react";
 import { signIn, useSession } from "next-auth/react";
-import { useAction } from "convex/react";
-import { api } from "@aether-ai-2/backend/convex/_generated/api";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { AuthButtons } from "../../auth/auth-buttons";
+// import { AuthButtons } from "@/auth/auth-buttons";
 import { FcGoogle } from "react-icons/fc";
 import { CircularLoader } from "@/components/ui/loader";
-import { MagicLink } from "../components/Magic-Link";
+import { MagicLink } from "@/components/Magic-Link";
 const emailSchema = z.object({
   email: z.string().email("Please enter a valid email address"),
 });
@@ -32,7 +21,7 @@ const emailSchema = z.object({
 type EmailFormData = z.infer<typeof emailSchema>;
 
 const LoginPage = () => {
-  const { currentTheme, currentMode, isLoading: themeLoading } = useTheme();
+  const { isLoading: themeLoading } = useTheme();
   const { data: session, status } = useSession();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -40,7 +29,7 @@ const LoginPage = () => {
   const [emailSent, setEmailSent] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [, setIsSubmitting] = useState(false);
 
   const [socialLoading, setSocialLoading] = useState<
     null | "google" | "github"
@@ -140,10 +129,10 @@ const LoginPage = () => {
     return <MagicLink />;
   }
 
-  const providers = [
-    { name: "Google", id: "google" },
-    { name: "GitHub", id: "github" },
-  ].filter(Boolean);
+  // const providers = [
+  //   { name: "Google", id: "google" },
+  //   { name: "GitHub", id: "github" },
+  // ].filter(Boolean);
 
   return (
     <div className="flex flex-1 items-center justify-center relative w-full p-4 h-screen">

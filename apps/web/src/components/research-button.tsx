@@ -5,14 +5,10 @@ import { Button } from "@/components/ui/button";
 import { Brain, ExternalLink } from "lucide-react";
 import { motion } from "framer-motion";
 import { useSidebar } from "@/contexts/sidebar-context";
+import { ToolCall } from "@/lib/types";
 
 interface ResearchButtonProps {
-  toolCalls?: Array<{
-    toolCallId: string;
-    toolName: string;
-    args: any;
-    result: any;
-  }>;
+  toolCalls?: ToolCall[];
 }
 
 export function ResearchButton({ toolCalls }: ResearchButtonProps) {

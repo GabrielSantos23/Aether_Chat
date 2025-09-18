@@ -1,6 +1,7 @@
 "use client";
 import { UploadButton, UploadDropzone, Uploader } from "@uploadthing/react";
 import type { OurFileRouter } from "./uploadthing";
+import { UploadedFile } from "./types";
 
 export function FileUploadButton({
   onUploadComplete,
@@ -11,7 +12,7 @@ export function FileUploadButton({
   appearance,
   content,
 }: {
-  onUploadComplete?: (res: any[]) => void;
+  onUploadComplete?: (res: UploadedFile[]) => void;
   onUploadError?: (error: Error) => void;
   onUploadBegin?: (files: File[]) => void;
   onUploadProgress?: (progress: number) => void;
@@ -38,7 +39,7 @@ export function FileUploadButton({
       onUploadProgress={(progress) => {
         onUploadProgress?.(progress);
       }}
-      onClientUploadComplete={(res: any[]) => {
+      onClientUploadComplete={(res: UploadedFile[]) => {
         onUploadComplete?.(res);
       }}
       onUploadError={(error: Error) => {
@@ -53,13 +54,13 @@ export function FileUploadDropzone({
   onUploadComplete,
   onUploadError,
 }: {
-  onUploadComplete?: (res: any[]) => void;
+  onUploadComplete?: (res: UploadedFile[]) => void;
   onUploadError?: (error: Error) => void;
 }) {
   return (
     <UploadDropzone<OurFileRouter, "fileUploader">
       endpoint="fileUploader"
-      onClientUploadComplete={(res: any[]) => {
+      onClientUploadComplete={(res: UploadedFile[]) => {
         onUploadComplete?.(res);
       }}
       onUploadError={(error: Error) => {
@@ -74,13 +75,13 @@ export function FileUploader({
   onUploadComplete,
   onUploadError,
 }: {
-  onUploadComplete?: (res: any[]) => void;
+  onUploadComplete?: (res: UploadedFile[]) => void;
   onUploadError?: (error: Error) => void;
 }) {
   return (
     <Uploader<OurFileRouter, "fileUploader">
       endpoint="fileUploader"
-      onClientUploadComplete={(res: any[]) => {
+      onClientUploadComplete={(res: UploadedFile[]) => {
         onUploadComplete?.(res);
       }}
       onUploadError={(error: Error) => {

@@ -4,13 +4,14 @@ import { memo } from "react";
 import { cn } from "@/lib/utils";
 import { Loader2Icon, SearchIcon } from "lucide-react";
 import { SearchTool } from "./search-tool";
+import { ToolCall } from "@/lib/types";
 
 interface SearchPartProps {
   id: string;
   index: number;
   toolCallId: string;
   done: boolean;
-  toolCall?: any;
+  toolCall?: ToolCall;
   onToggleSidebar?: () => void;
   isSidebarOpen?: boolean;
 }

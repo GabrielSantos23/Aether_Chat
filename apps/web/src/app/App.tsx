@@ -4,18 +4,14 @@ import {
   Route,
   Routes,
   Outlet,
-  useLocation,
 } from "react-router-dom";
-import { useQuery } from "convex/react";
 import { useSession } from "next-auth/react";
 import Chat from "@/routes/Chat";
 import ProtectedRoute from "@/routes/ProtectedRoute";
 import SettingsPage from "@/routes/Settings";
 import GalleryPage from "@/routes/Gallery";
 import ResearchPage from "@/routes/Research";
-import { api } from "@aether-ai-2/backend/convex/_generated/api";
 import LoginPage from "@/routes/Login";
-import { CircularLoader } from "@/components/ui/loader";
 import { SidebarProvider } from "@/components/ui/sidebar";
 import AccountDashboard from "@/routes/account/accountDashboard";
 import AccountIndex from "@/routes/account/AccountIndex";
@@ -27,6 +23,7 @@ import AccountLayout from "@/routes/account/AccountLayout";
 import TestUploadPage from "@/routes/testUploadPage";
 import TestResendPage from "@/routes/test-resend";
 
+// TODO: Implement shared chat functionality
 const SharedChatPage = () => <div>Shared Chat Page (to be implemented)</div>;
 const NotFoundPage = () => <p>Not found</p>;
 
@@ -39,7 +36,7 @@ function SidebarLayout() {
 }
 
 function AppRoutes() {
-  const { data: session, status } = useSession();
+  const {} = useSession();
 
   return (
     <Routes>

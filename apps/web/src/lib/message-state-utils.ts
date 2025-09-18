@@ -2,12 +2,7 @@
  * Centralized message state predicates for consistent state checking across components
  */
 
-export interface MessageState {
-  isComplete?: boolean;
-  content?: string;
-  thinking?: string;
-  toolCalls?: Array<any>;
-}
+import { type MessageState, type ToolCall, type SearchResult } from "./types";
 
 /**
  * Check if a message is currently loading (no content, thinking, or tool calls)
@@ -56,18 +51,21 @@ export const isReasoningStreaming = (message: MessageState): boolean => {
 /**
  * Get search tool calls from a message
  */
-export const getSearchToolCalls = (message: MessageState) => {
+export const getSearchToolCalls = (message: MessageState): ToolCall[] => {
   return (
-    message.toolCalls?.filter((tc: any) => tc.toolName === "webSearch") || []
+    message.toolCalls?.filter((tc: ToolCall) => tc.toolName === "webSearch") ||
+    []
   );
 };
 
 /**
  * Get search results from a message
  */
-export const getSearchResults = (message: MessageState) => {
+export const getSearchResults = (message: MessageState): SearchResult[] => {
   const searchToolCalls = getSearchToolCalls(message);
-  return searchToolCalls.length > 0 ? searchToolCalls[0]?.result || [] : [];
+  return searchToolCalls.length > 0
+    ? (searchToolCalls[0]?.result as SearchResult[]) || []
+    : [];
 };
 
 /**
@@ -75,5 +73,7 @@ export const getSearchResults = (message: MessageState) => {
  */
 export const getSearchUrls = (message: MessageState): string[] => {
   const searchResults = getSearchResults(message);
-  return searchResults.map((result: any) => result.url).filter(Boolean);
+  return searchResults
+    .map((result: SearchResult) => result.url)
+    .filter(Boolean);
 };

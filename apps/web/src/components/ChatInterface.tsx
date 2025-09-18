@@ -1,17 +1,9 @@
 "use client";
 
-import {
-  useState,
-  useCallback,
-  useEffect,
-  useRef,
-  createContext,
-  useMemo,
-  type FC,
-} from "react";
+import { useState, useCallback, useEffect, useRef, createContext } from "react";
 import { useQuery, useMutation, useAction, useConvexAuth } from "convex/react";
-import { api } from "../../../backend/convex/_generated/api";
-import type { Id } from "../../../backend/convex/_generated/dataModel";
+import { api } from "@backend/convex/_generated/api";
+import type { Id } from "@backend/convex/_generated/dataModel";
 import { useSession } from "next-auth/react";
 import { cn } from "@/lib/utils";
 import { useModel } from "@/contexts/ModelContext";
@@ -26,57 +18,35 @@ import {
   ConversationScrollButton,
 } from "@/components/ai-elements/conversation";
 import { VirtualizedMessageList } from "@/components/ai-elements/virtualized-message-list";
-import { Button } from "@/components/ui/button";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
+import { TooltipProvider } from "@/components/ui/tooltip";
 
-import {
-  GlobeIcon,
-  MicIcon,
-  ImageIcon,
-  TelescopeIcon,
-  MessageCircleIcon,
-  Loader2Icon,
-  ArrowUpIcon,
-  Paperclip,
-  AlertTriangleIcon,
-  EditIcon,
-  XIcon,
-  FileIcon,
-  UserIcon,
-  LogInIcon,
-} from "lucide-react";
+import { Loader2Icon } from "lucide-react";
 import { AIMessage } from "./ai-elements/ai-message";
 import { toast } from "sonner";
 import { ProDialog } from "./pro-dialog";
 import { PromptInputComponent } from "./PromptInputComponent";
-import EmptyChatSuggestions, {
-  ChatSuggestions,
-} from "./ai-elements/ChatSuggestions";
+import { ChatSuggestions } from "./ai-elements/ChatSuggestions";
 import { UserMessage } from "./ai-elements/user-message";
+import { type UploadedFile, type Message as MessageType } from "@/lib/types";
 
 const PromptInputContext = createContext<{
-  attachedFiles: Array<{
-    name: string;
-    type: string;
-    size: number;
-    url: string;
-  }>;
+  attachedFiles: Array<
+    UploadedFile & {
+      isUploading?: boolean;
+      uploadProgress?: number;
+    }
+  >;
   setAttachedFiles: (
-    files: Array<{
-      name: string;
-      type: string;
-      size: number;
-      url: string;
-    }>
+    files: Array<
+      UploadedFile & {
+        isUploading?: boolean;
+        uploadProgress?: number;
+      }
+    >
   ) => void;
   onFileUpload: (files: FileList | null) => void;
   onRemoveFile: (index: number) => void;
-  onUploadThingComplete: (files: any[]) => void;
+  onUploadThingComplete: (files: UploadedFile[]) => void;
 }>({
   attachedFiles: [],
   setAttachedFiles: () => {},
@@ -98,18 +68,16 @@ export default function ChatInterface({
   const { data: session, status } = useSession();
   const { isLoading: isConvexLoading, isAuthenticated: isConvexAuthenticated } =
     useConvexAuth();
-  const { selectedModelId, setSelectedModelId } = useModel();
+  const { selectedModelId } = useModel();
   const [text, setText] = useState<string>("");
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [attachedFiles, setAttachedFiles] = useState<
-    Array<{
-      name: string;
-      type: string;
-      size: number;
-      url: string;
-      isUploading?: boolean;
-      uploadProgress?: number;
-    }>
+    Array<
+      UploadedFile & {
+        isUploading?: boolean;
+        uploadProgress?: number;
+      }
+    >
   >([]);
   const [isUploading, setIsUploading] = useState(false);
 
@@ -279,6 +247,7 @@ export default function ChatInterface({
         type: file.type,
         size: file.size,
         url: URL.createObjectURL(file),
+        key: `preview-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
         isUploading: true,
         uploadProgress: 0,
       }));
@@ -314,30 +283,34 @@ export default function ChatInterface({
     [canModelViewFiles]
   );
 
-  const handleUploadThingComplete = useCallback((uploadedFiles: any[]) => {
-    const files = uploadedFiles
-      .filter((file) => file.type.startsWith("image/"))
-      .map((file) => ({
-        name: file.name,
-        type: file.type,
-        size: file.size,
-        url: file.url,
-        isUploading: false,
-        uploadProgress: 100,
-      }));
+  const handleUploadThingComplete = useCallback(
+    (uploadedFiles: UploadedFile[]) => {
+      const files = uploadedFiles
+        .filter((file) => file.type.startsWith("image/"))
+        .map((file) => ({
+          name: file.name,
+          type: file.type,
+          size: file.size,
+          url: file.url,
+          key: file.key,
+          isUploading: false,
+          uploadProgress: 100,
+        }));
 
-    if (files.length === 0) {
-      toast.warning("Only image files are supported");
-      return;
-    }
+      if (files.length === 0) {
+        toast.warning("Only image files are supported");
+        return;
+      }
 
-    setAttachedFiles((prev) => {
-      const newFiles = [...prev, ...files];
-      return newFiles;
-    });
+      setAttachedFiles((prev) => {
+        const newFiles = [...prev, ...files];
+        return newFiles;
+      });
 
-    toast.success(`${files.length} file(s) uploaded successfully`);
-  }, []);
+      toast.success(`${files.length} file(s) uploaded successfully`);
+    },
+    []
+  );
 
   const removeAttachedFile = useCallback((index: number) => {
     setAttachedFiles((prev) => {
@@ -413,7 +386,7 @@ export default function ChatInterface({
       if (!safeMessages.length) return;
 
       try {
-        let previousUserMessage: any | null = null;
+        let previousUserMessage: MessageType | null = null;
         for (let i = messageIndex - 1; i >= 0; i--) {
           if (safeMessages[i].role === "user") {
             previousUserMessage = safeMessages[i];
@@ -424,7 +397,7 @@ export default function ChatInterface({
         if (!previousUserMessage) return;
 
         await editMessageAndRegenerate({
-          messageId: previousUserMessage._id,
+          messageId: previousUserMessage._id as Id<"messages">,
           content: previousUserMessage.content,
           modelId: selectedModelId,
           webSearch: tool === "search",
@@ -601,35 +574,37 @@ export default function ChatInterface({
                           className="h-full"
                         />
                       ) : (
-                        safeMessages.map((message: any, index: number) => {
-                          if (message.role === "user") {
-                            return (
-                              <UserMessage
-                                key={message._id}
-                                message={message}
-                                onEdit={handleUserMessageEdit}
-                              />
-                            );
-                          } else {
-                            let hasPreviousUserMessage = false;
-                            for (let i = index - 1; i >= 0; i--) {
-                              if (safeMessages[i].role === "user") {
-                                hasPreviousUserMessage = true;
-                                break;
-                              }
-                            }
-                            return (
-                              <AIMessage
-                                key={message._id}
-                                message={message}
-                                onRegenerate={() =>
-                                  handleAIMessageRegenerate(index)
+                        safeMessages.map(
+                          (message: MessageType, index: number) => {
+                            if (message.role === "user") {
+                              return (
+                                <UserMessage
+                                  key={message._id}
+                                  message={message}
+                                  onEdit={handleUserMessageEdit}
+                                />
+                              );
+                            } else {
+                              let hasPreviousUserMessage = false;
+                              for (let i = index - 1; i >= 0; i--) {
+                                if (safeMessages[i].role === "user") {
+                                  hasPreviousUserMessage = true;
+                                  break;
                                 }
-                                canRegenerate={hasPreviousUserMessage}
-                              />
-                            );
+                              }
+                              return (
+                                <AIMessage
+                                  key={message._id}
+                                  message={message}
+                                  onRegenerate={() =>
+                                    handleAIMessageRegenerate(index)
+                                  }
+                                  canRegenerate={hasPreviousUserMessage}
+                                />
+                              );
+                            }
                           }
-                        })
+                        )
                       )}
                     </div>
                   </ConversationContent>
@@ -652,7 +627,7 @@ export default function ChatInterface({
               setProDialogOpen={setProDialogOpen}
               setEditingMessageId={setEditingMessageId}
               setText={setText}
-              setAttachedFiles={setAttachedFiles}
+              setAttachedFiles={(files) => setAttachedFiles(files)}
               setTool={setTool}
               handleSubmit={handleSubmit}
               handleTextareaChange={handleTextareaChange}

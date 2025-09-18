@@ -8,7 +8,7 @@ import {
 import { cn } from "@/lib/utils";
 import { createContext, memo, useContext, useMemo } from "react";
 import { type Components } from "react-markdown";
-import { CodeBlock, CodeBlockCode } from "../ai-elements/code-block";
+import { CodeBlock, CodeBlockCode } from "@/components/ai-elements/code-block";
 
 const generateKey = () => {
   return (
@@ -112,7 +112,7 @@ function StreamingText({ children }: { children: string }) {
   const id = useMemo(() => generateKey(), []);
 
   const words = children.split(/\s+/);
-  const segments = words.reduce<string[]>((acc, cur, idx) => {
+  const segments = words.reduce<string[]>((acc, _, idx) => {
     if (idx % 10 === 0) {
       const segment = words.slice(idx, idx + 10).join(" ");
       acc.push(idx + 10 >= words.length ? segment : segment + " ");

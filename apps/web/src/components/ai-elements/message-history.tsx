@@ -1,38 +1,21 @@
-import { Button } from "../ui/button";
-import { Input } from "../ui/input";
-import { Popover, PopoverContent, PopoverTrigger } from "../ui/popover";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import { AlignJustify, Search } from "lucide-react";
-import { ScrollArea } from "../ui/scroll-area";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { useQuery, useConvexAuth } from "convex/react";
 import { api } from "@aether-ai-2/backend/convex/_generated/api";
 import { useState, useMemo } from "react";
 import { useSession } from "next-auth/react";
 import type { Id } from "@aether-ai-2/backend/convex/_generated/dataModel";
+import { Message as MessageType, ToolCall } from "@/lib/types";
 
-type Message = {
-  _id: Id<"messages">;
-  chatId: Id<"chats">;
-  role: "user" | "assistant";
-  content: string;
-  createdAt: number;
-  modelId?: string;
-  thinking?: string;
-  thinkingDuration?: number;
-  isComplete?: boolean;
-  isCancelled?: boolean;
-  attachments?: Array<{
-    name: string;
-    type: string;
-    size: number;
-    url: string;
-  }>;
-  toolCalls?: Array<{
-    toolCallId: string;
-    toolName: string;
-    args: any;
-    result?: any;
-  }>;
-};
+// Use the shared Message type from lib/types
+type Message = MessageType;
 
 function getTruncatedText(text: string, maxLength: number = 32) {
   if (text.length > maxLength) {

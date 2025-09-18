@@ -12,9 +12,10 @@ import {
   TooltipPositioner,
 } from "@/components/ui/tooltip";
 import { toast } from "sonner";
+import { type Message as MessageType } from "@/lib/types";
 
 interface UserMessageProps {
-  message: any;
+  message: MessageType;
   onEdit?: (messageId: string, content: string) => void;
 }
 
@@ -58,7 +59,7 @@ export const UserMessage = memo(function UserMessage({
         {message.attachments && message.attachments.length > 0 && (
           <div className="space-y-2 mt-2 sm:mt-3">
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
-              {message.attachments.map((attachment: any, index: number) => (
+              {message.attachments.map((attachment, index: number) => (
                 <div key={index} className="relative group/image">
                   <img
                     src={attachment.url}
@@ -86,7 +87,7 @@ export const UserMessage = memo(function UserMessage({
             {/* Mobile attachment info */}
             <div className="sm:hidden">
               {message.attachments.map(
-                (attachment: any, index: number) =>
+                (attachment, index: number) =>
                   attachment.name && (
                     <div
                       key={`name-${index}`}

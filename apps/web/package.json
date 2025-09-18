@@ -5,7 +5,9 @@
   "scripts": {
     "dev": "next dev --turbopack --port=3001",
     "build": "next build",
-    "start": "next start"
+    "start": "next start",
+    "lint": "eslint . --ext .ts,.tsx --fix",
+    "lint:check": "eslint . --ext .ts,.tsx"
   },
   "dependencies": {
     "@aether-ai-2/backend": "workspace:*",
@@ -73,6 +75,11 @@
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "@typescript-eslint/eslint-plugin": "^8.0.0",
+    "@typescript-eslint/parser": "^8.0.0",
+    "eslint": "^9.0.0",
+    "eslint-config-next": "^15.5.0",
+    "eslint-plugin-react-hooks": "^5.0.0",
     "tailwindcss": "^4.1.13",
     "typescript": "^5"
   }

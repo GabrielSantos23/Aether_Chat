@@ -17,7 +17,7 @@ import { cn } from "@/lib/utils";
 import { Link, useNavigate } from "react-router-dom";
 import { useSession, signOut } from "next-auth/react";
 import { useQuery } from "convex/react";
-import { api } from "../../../backend/convex/_generated/api";
+import { api } from "@backend/convex/_generated/api";
 
 interface UserButtonProps {
   user?: {
@@ -46,7 +46,7 @@ export function UserButton({
   className,
   isPro = false,
 }: UserButtonProps) {
-  const { data: session, status, update } = useSession();
+  const { data: session, status } = useSession();
   const convexUser = useQuery(api.myFunctions.getUser);
 
   const navigate = useNavigate();
@@ -82,8 +82,8 @@ export function UserButton({
       return {
         id: user.id,
         email: user.email || "",
-        name: user.fullName || undefined,
-        image: user.avatar || undefined,
+        name: user.fullName || null,
+        image: user.avatar || null,
       };
     }
 
@@ -91,17 +91,17 @@ export function UserButton({
       return {
         id: convexUser._id,
         email: convexUser.email,
-        name: convexUser.name,
-        image: convexUser.image,
+        name: convexUser.name ?? null,
+        image: convexUser.image ?? null,
       };
     }
 
     if (session?.user) {
       return {
-        id: session.user.email || "",
+        id: session.user.id || "",
         email: session.user.email || "",
-        name: session.user.name,
-        image: session.user.image,
+        name: session.user.name ?? null,
+        image: session.user.image ?? null,
       };
     }
 

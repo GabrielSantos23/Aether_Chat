@@ -28,6 +28,7 @@ import type * as chat_shared from "../chat/shared.js";
 import type * as constants from "../constants.js";
 import type * as healthCheck from "../healthCheck.js";
 import type * as http from "../http.js";
+import type * as lib_validation from "../lib/validation.js";
 import type * as limits from "../limits.js";
 import type * as myFunctions from "../myFunctions.js";
 import type * as research from "../research.js";
@@ -58,6 +59,7 @@ declare const fullApi: ApiFromModules<{
   constants: typeof constants;
   healthCheck: typeof healthCheck;
   http: typeof http;
+  "lib/validation": typeof lib_validation;
   limits: typeof limits;
   myFunctions: typeof myFunctions;
   research: typeof research;

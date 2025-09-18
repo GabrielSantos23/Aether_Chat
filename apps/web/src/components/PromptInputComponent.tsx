@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import { match, P } from "ts-pattern";
 import type { FC } from "react";
+import { UploadedFile } from "@/lib/types";
 import { Button } from "./ui/button";
 import {
   PromptInput,
@@ -42,7 +43,12 @@ interface PromptInputComponentProps {
   setEditingMessageId: (id: string | undefined) => void;
   setText: (text: string) => void;
   setAttachedFiles: (
-    files: Array<{ name: string; type: string; size: number; url: string }>
+    files: Array<
+      UploadedFile & {
+        isUploading?: boolean;
+        uploadProgress?: number;
+      }
+    >
   ) => void;
   setTool: (tool: string) => void;
   handleSubmit: (e: React.FormEvent<HTMLFormElement>) => Promise<void>;
@@ -59,7 +65,7 @@ interface PromptInputComponentProps {
   remainingSearches: number;
   remainingResearches: number;
   handleFileUpload: (files: FileList | null) => void;
-  handleUploadThingComplete: (uploadedFiles: any[]) => void;
+  handleUploadThingComplete: (uploadedFiles: UploadedFile[]) => void;
   isUploading?: boolean;
 }
 
