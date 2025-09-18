@@ -6,6 +6,7 @@ import {
   useEffect,
   useRef,
   createContext,
+  useMemo,
   type FC,
 } from "react";
 import { useQuery, useMutation, useAction, useConvexAuth } from "convex/react";
@@ -24,6 +25,7 @@ import {
   ConversationContent,
   ConversationScrollButton,
 } from "@/components/ai-elements/conversation";
+import { VirtualizedMessageList } from "@/components/ai-elements/virtualized-message-list";
 import { Button } from "@/components/ui/button";
 import {
   Tooltip,
@@ -48,7 +50,6 @@ import {
   UserIcon,
   LogInIcon,
 } from "lucide-react";
-import { UserMessage } from "./ai-elements/user-message";
 import { AIMessage } from "./ai-elements/ai-message";
 import { toast } from "sonner";
 import { ProDialog } from "./pro-dialog";
@@ -56,6 +57,7 @@ import { PromptInputComponent } from "./PromptInputComponent";
 import EmptyChatSuggestions, {
   ChatSuggestions,
 } from "./ai-elements/ChatSuggestions";
+import { UserMessage } from "./ai-elements/user-message";
 
 const PromptInputContext = createContext<{
   attachedFiles: Array<{
@@ -226,6 +228,9 @@ export default function ChatInterface({
   const hasMessages = (messages?.length ?? 0) > 0;
   const safeMessages = messages ?? [];
 
+  // Use virtualization for large message lists (threshold: 50 messages)
+  const shouldUseVirtualization = safeMessages.length > 50;
+
   const chatDeleted = currentChatId && chat === null && !isSessionLoading;
 
   const isUnauthenticated = status === "unauthenticated" || !session?.user;
@@ -395,36 +400,42 @@ export default function ChatInterface({
     ]
   );
 
-  const handleUserMessageEdit = (messageId: string, content: string) => {
-    setEditingMessageId(messageId);
-    setText(content);
-  };
+  const handleUserMessageEdit = useCallback(
+    (messageId: string, content: string) => {
+      setEditingMessageId(messageId);
+      setText(content);
+    },
+    []
+  );
 
-  const handleAIMessageRegenerate = async (messageIndex: number) => {
-    if (!safeMessages.length) return;
+  const handleAIMessageRegenerate = useCallback(
+    async (messageIndex: number) => {
+      if (!safeMessages.length) return;
 
-    try {
-      let previousUserMessage: any | null = null;
-      for (let i = messageIndex - 1; i >= 0; i--) {
-        if (safeMessages[i].role === "user") {
-          previousUserMessage = safeMessages[i];
-          break;
+      try {
+        let previousUserMessage: any | null = null;
+        for (let i = messageIndex - 1; i >= 0; i--) {
+          if (safeMessages[i].role === "user") {
+            previousUserMessage = safeMessages[i];
+            break;
+          }
         }
+
+        if (!previousUserMessage) return;
+
+        await editMessageAndRegenerate({
+          messageId: previousUserMessage._id,
+          content: previousUserMessage.content,
+          modelId: selectedModelId,
+          webSearch: tool === "search",
+        });
+      } catch (err) {
+        console.error("Regenerate failed", err);
+        toast.error("Failed to regenerate message");
       }
-
-      if (!previousUserMessage) return;
-
-      await editMessageAndRegenerate({
-        messageId: previousUserMessage._id,
-        content: previousUserMessage.content,
-        modelId: selectedModelId,
-        webSearch: tool === "search",
-      });
-    } catch (err) {
-      console.error("Regenerate failed", err);
-      toast.error("Failed to regenerate message");
-    }
-  };
+    },
+    [safeMessages, editMessageAndRegenerate, selectedModelId, tool]
+  );
 
   const handleTextareaChange = useCallback(
     (e: React.ChangeEvent<HTMLTextAreaElement>) => {
@@ -582,35 +593,44 @@ export default function ChatInterface({
                 <Conversation className="h-full relative">
                   <ConversationContent className="h-full flex flex-col">
                     <div className="flex-1 mx-auto max-w-3xl w-full px-3 sm:px-6 pb-56 pt-32">
-                      {safeMessages.map((message: any, index: number) => {
-                        if (message.role === "user") {
-                          return (
-                            <UserMessage
-                              key={message._id}
-                              message={message}
-                              onEdit={handleUserMessageEdit}
-                            />
-                          );
-                        } else {
-                          let hasPreviousUserMessage = false;
-                          for (let i = index - 1; i >= 0; i--) {
-                            if (safeMessages[i].role === "user") {
-                              hasPreviousUserMessage = true;
-                              break;
-                            }
-                          }
-                          return (
-                            <AIMessage
-                              key={message._id}
-                              message={message}
-                              onRegenerate={() =>
-                                handleAIMessageRegenerate(index)
+                      {shouldUseVirtualization ? (
+                        <VirtualizedMessageList
+                          messages={safeMessages}
+                          onUserMessageEdit={handleUserMessageEdit}
+                          onAIMessageRegenerate={handleAIMessageRegenerate}
+                          className="h-full"
+                        />
+                      ) : (
+                        safeMessages.map((message: any, index: number) => {
+                          if (message.role === "user") {
+                            return (
+                              <UserMessage
+                                key={message._id}
+                                message={message}
+                                onEdit={handleUserMessageEdit}
+                              />
+                            );
+                          } else {
+                            let hasPreviousUserMessage = false;
+                            for (let i = index - 1; i >= 0; i--) {
+                              if (safeMessages[i].role === "user") {
+                                hasPreviousUserMessage = true;
+                                break;
                               }
-                              canRegenerate={hasPreviousUserMessage}
-                            />
-                          );
-                        }
-                      })}
+                            }
+                            return (
+                              <AIMessage
+                                key={message._id}
+                                message={message}
+                                onRegenerate={() =>
+                                  handleAIMessageRegenerate(index)
+                                }
+                                canRegenerate={hasPreviousUserMessage}
+                              />
+                            );
+                          }
+                        })
+                      )}
                     </div>
                   </ConversationContent>
                   <ConversationScrollButton

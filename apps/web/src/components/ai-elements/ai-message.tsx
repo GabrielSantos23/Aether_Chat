@@ -1,6 +1,6 @@
 "use client";
 
-import { memo } from "react";
+import { memo, useCallback, useMemo } from "react";
 import { cn } from "@/lib/utils";
 import { Message, MessageContent } from "@/components/ai-elements/message";
 import { Markdown } from "@/components/ui/markdown";
@@ -25,6 +25,14 @@ import { Part } from "./part";
 import { SourcesButton } from "../sources-button";
 import { ResearchButton } from "../research-button";
 import { UrlResultButton } from "../url-result-button";
+import {
+  isLoading,
+  isStreaming,
+  hasThinking,
+  hasTools,
+  isReasoningStreaming,
+  getSearchUrls,
+} from "@/lib/message-state-utils";
 
 interface AIMessageProps {
   message: any;
@@ -37,14 +45,44 @@ export const AIMessage = memo(function AIMessage({
   onRegenerate,
   canRegenerate = false,
 }: AIMessageProps) {
-  const modelObj = message.modelId
-    ? availableModels.find((m) => m.id === message.modelId)
-    : undefined;
-  const modelName = modelObj?.name || (message.modelId as string | undefined);
-  const modelIcon = (modelObj?.icon as ModelType | undefined) ?? undefined;
-  const isStreaming = !message.isComplete && message.content;
+  // Memoize model information
+  const modelInfo = useMemo(() => {
+    const modelObj = message.modelId
+      ? availableModels.find((m) => m.id === message.modelId)
+      : undefined;
+    return {
+      modelObj,
+      modelName: modelObj?.name || (message.modelId as string | undefined),
+      modelIcon: (modelObj?.icon as ModelType | undefined) ?? undefined,
+    };
+  }, [message.modelId]);
 
-  const handleCopy = async () => {
+  // Use centralized state predicates
+  const messageState = useMemo(
+    () => ({
+      isComplete: message.isComplete,
+      content: message.content,
+      thinking: message.thinking,
+      toolCalls: message.toolCalls,
+    }),
+    [message.isComplete, message.content, message.thinking, message.toolCalls]
+  );
+
+  const messageIsLoading = isLoading(messageState);
+  const messageIsStreaming = isStreaming(messageState);
+  const messageHasThinking = hasThinking(messageState);
+  const messageHasTools = hasTools(messageState);
+  const messageIsReasoningStreaming = isReasoningStreaming(messageState);
+  const reasoningDuration = message.thinkingDuration || 0;
+
+  // Memoize search-related data
+  const searchData = useMemo(() => {
+    const urls = getSearchUrls(messageState);
+    return { urls };
+  }, [messageState]);
+
+  // Memoize handlers
+  const handleCopy = useCallback(async () => {
     if (message.content) {
       try {
         await navigator.clipboard.writeText(message.content);
@@ -54,34 +92,15 @@ export const AIMessage = memo(function AIMessage({
         toast.error("Copy failed");
       }
     }
-  };
+  }, [message.content]);
 
-  const handleRegenerate = () => {
+  const handleRegenerate = useCallback(() => {
     if (onRegenerate) {
       onRegenerate();
     }
-  };
+  }, [onRegenerate]);
 
-  const isLoading =
-    !message.isComplete &&
-    !message.content &&
-    !message.thinking &&
-    !message.toolCalls?.length;
-  const hasThinking =
-    message.thinking &&
-    typeof message.thinking === "string" &&
-    message.thinking.trim().length > 0;
-
-  const isReasoningStreaming = hasThinking && !message.isComplete;
-  const reasoningDuration = message.thinkingDuration || 0;
-
-  const searchToolCalls =
-    message.toolCalls?.filter((tc: any) => tc.toolName === "webSearch") || [];
-  const searchResults =
-    searchToolCalls.length > 0 ? searchToolCalls[0]?.result || [] : [];
-  const urls = searchResults.map((result: any) => result.url).filter(Boolean);
-
-  if (isLoading) {
+  if (messageIsLoading) {
     return (
       <Message
         from="assistant"
@@ -120,17 +139,17 @@ export const AIMessage = memo(function AIMessage({
         )}
       >
         <div className="space-y-2 sm:space-y-3">
-          {message.toolCalls && message.toolCalls.length > 0 && (
+          {messageHasTools && (
             <div className="space-y-2">
               <SourcesButton toolCalls={message.toolCalls} />
               <ResearchButton toolCalls={message.toolCalls} />
             </div>
           )}
 
-          {hasThinking && (
+          {messageHasThinking && (
             <div className="reasoning-container">
               <Reasoning
-                isStreaming={isReasoningStreaming}
+                isStreaming={messageIsReasoningStreaming}
                 duration={reasoningDuration}
               >
                 <ReasoningTrigger className="hover:text-foreground text-muted-foreground cursor-pointer" />
@@ -162,12 +181,12 @@ export const AIMessage = memo(function AIMessage({
             </div>
           )}
 
-          {message.isComplete && urls.length > 0 && (
+          {message.isComplete && searchData.urls.length > 0 && (
             <div className="mt-4">
               <UrlResultButton
-                urls={urls}
-                count={urls.length}
-                label={urls.length === 1 ? "source" : "sources"}
+                urls={searchData.urls}
+                count={searchData.urls.length}
+                label={searchData.urls.length === 1 ? "source" : "sources"}
                 toolCalls={message.toolCalls}
               />
             </div>
@@ -208,16 +227,16 @@ export const AIMessage = memo(function AIMessage({
                 </TooltipPositioner>
               </Tooltip>
             )}
-            {modelName && (
+            {modelInfo.modelName && (
               <div className="flex items-center gap-1 sm:gap-2 ml-2 px-1 sm:px-2 py-1">
-                {modelIcon && (
+                {modelInfo.modelIcon && (
                   <ModelIcon
-                    model={modelIcon}
+                    model={modelInfo.modelIcon}
                     className="size-3 sm:size-3.5 shrink-0 fill-primary"
                   />
                 )}
                 <span className="text-xs truncate max-w-[120px] sm:max-w-none">
-                  {modelName}
+                  {modelInfo.modelName}
                 </span>
               </div>
             )}

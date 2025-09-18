@@ -26,7 +26,7 @@ const ModelContext = createContext<ModelContextType | undefined>(undefined);
 const STORAGE_KEYS = {
   ENABLED_MODELS: "aether_enabled_models",
   SELECTED_MODEL: "aether_selected_model",
-};
+} as const;
 
 export function ModelProvider({ children }: { children: ReactNode }) {
   const [selectedModelId, setSelectedModelIdState] =
@@ -37,68 +37,78 @@ export function ModelProvider({ children }: { children: ReactNode }) {
   const [isInitialized, setIsInitialized] = useState(false);
 
   useEffect(() => {
-    if (typeof window !== "undefined") {
-      try {
-        const savedEnabledModels = localStorage.getItem(
-          STORAGE_KEYS.ENABLED_MODELS
-        );
-        if (savedEnabledModels) {
-          const parsedEnabledModels = JSON.parse(savedEnabledModels);
-          if (
-            Array.isArray(parsedEnabledModels) &&
-            parsedEnabledModels.length > 0
-          ) {
-            const currentModelIds = new Set(models.map((m) => m.id));
-            const merged = new Set<string>();
-            for (const id of parsedEnabledModels) {
-              if (currentModelIds.has(id)) merged.add(id);
-            }
-            for (const id of currentModelIds) {
-              if (!merged.has(id)) merged.add(id);
-            }
-            setEnabledModelsState(merged);
-          }
-        }
+    if (typeof window === "undefined") {
+      setIsInitialized(true);
+      return;
+    }
 
-        const savedSelectedModel = localStorage.getItem(
-          STORAGE_KEYS.SELECTED_MODEL
-        );
+    try {
+      const savedEnabledModels = localStorage.getItem(
+        STORAGE_KEYS.ENABLED_MODELS
+      );
+      if (savedEnabledModels) {
+        const parsedEnabledModels = JSON.parse(savedEnabledModels);
         if (
-          savedSelectedModel &&
-          models.some((model) => model.id === savedSelectedModel)
+          Array.isArray(parsedEnabledModels) &&
+          parsedEnabledModels.length > 0
         ) {
-          setSelectedModelIdState(savedSelectedModel);
+          const currentModelIds = new Set(models.map((m) => m.id));
+          const validEnabledModels = new Set<string>();
+
+          for (const id of parsedEnabledModels) {
+            if (currentModelIds.has(id)) {
+              validEnabledModels.add(id);
+            }
+          }
+
+          if (validEnabledModels.size === 0) {
+            validEnabledModels.add(models[0]?.id || "gemini-2.0-flash");
+          }
+
+          setEnabledModelsState(validEnabledModels);
         }
-      } catch (error) {
-        console.error("Error loading model settings from localStorage:", error);
-      } finally {
-        setIsInitialized(true);
       }
-    } else {
+
+      const savedSelectedModel = localStorage.getItem(
+        STORAGE_KEYS.SELECTED_MODEL
+      );
+      if (
+        savedSelectedModel &&
+        models.some((model) => model.id === savedSelectedModel)
+      ) {
+        setSelectedModelIdState(savedSelectedModel);
+      }
+    } catch (error) {
+      console.error("Error loading model settings from localStorage:", error);
+    } finally {
       setIsInitialized(true);
     }
   }, []);
 
   useEffect(() => {
-    if (isInitialized && typeof window !== "undefined") {
-      try {
-        localStorage.setItem(
-          STORAGE_KEYS.ENABLED_MODELS,
-          JSON.stringify(Array.from(enabledModels))
-        );
-      } catch (error) {
-        console.error("Error saving enabled models to localStorage:", error);
-      }
+    if (!isInitialized || typeof window === "undefined") {
+      return;
+    }
+
+    try {
+      localStorage.setItem(
+        STORAGE_KEYS.ENABLED_MODELS,
+        JSON.stringify(Array.from(enabledModels))
+      );
+    } catch (error) {
+      console.error("Error saving enabled models to localStorage:", error);
     }
   }, [enabledModels, isInitialized]);
 
   useEffect(() => {
-    if (isInitialized && typeof window !== "undefined") {
-      try {
-        localStorage.setItem(STORAGE_KEYS.SELECTED_MODEL, selectedModelId);
-      } catch (error) {
-        console.error("Error saving selected model to localStorage:", error);
-      }
+    if (!isInitialized || typeof window === "undefined") {
+      return;
+    }
+
+    try {
+      localStorage.setItem(STORAGE_KEYS.SELECTED_MODEL, selectedModelId);
+    } catch (error) {
+      console.error("Error saving selected model to localStorage:", error);
     }
   }, [selectedModelId, isInitialized]);
 
@@ -117,26 +127,44 @@ export function ModelProvider({ children }: { children: ReactNode }) {
   };
 
   const setEnabledModels = (newEnabledModels: Set<string>) => {
+    if (newEnabledModels.size === 0) {
+      console.warn(
+        "Cannot disable all models. At least one model must remain enabled."
+      );
+      return;
+    }
+
     setEnabledModelsState(newEnabledModels);
 
-    if (!newEnabledModels.has(selectedModelId) && newEnabledModels.size > 0) {
-      setSelectedModelIdState(Array.from(newEnabledModels)[0]);
+    if (!newEnabledModels.has(selectedModelId)) {
+      const firstEnabledModel = Array.from(newEnabledModels)[0];
+      if (firstEnabledModel) {
+        setSelectedModelIdState(firstEnabledModel);
+      }
     }
   };
 
   const toggleModelEnabled = (modelId: string) => {
     const newEnabledModels = new Set(enabledModels);
+
     if (newEnabledModels.has(modelId)) {
       if (newEnabledModels.size <= 1) {
+        console.warn("Cannot disable the last enabled model.");
         return;
       }
+
       newEnabledModels.delete(modelId);
-      if (modelId === selectedModelId && newEnabledModels.size > 0) {
-        setSelectedModelIdState(Array.from(newEnabledModels)[0]);
+
+      if (modelId === selectedModelId) {
+        const firstEnabledModel = Array.from(newEnabledModels)[0];
+        if (firstEnabledModel) {
+          setSelectedModelIdState(firstEnabledModel);
+        }
       }
     } else {
       newEnabledModels.add(modelId);
     }
+
     setEnabledModelsState(newEnabledModels);
   };
 
@@ -145,7 +173,12 @@ export function ModelProvider({ children }: { children: ReactNode }) {
   };
 
   const enableAllModels = () => {
-    setEnabledModelsState(new Set(models.map((model) => model.id)));
+    const allModelIds = new Set(models.map((model) => model.id));
+    setEnabledModelsState(allModelIds);
+
+    if (!allModelIds.has(selectedModelId) && models.length > 0) {
+      setSelectedModelIdState(models[0].id);
+    }
   };
 
   const disableAllModels = () => {
@@ -153,6 +186,8 @@ export function ModelProvider({ children }: { children: ReactNode }) {
     if (firstModelId) {
       setEnabledModelsState(new Set([firstModelId]));
       setSelectedModelIdState(firstModelId);
+    } else {
+      console.error("No models available to keep enabled");
     }
   };
 

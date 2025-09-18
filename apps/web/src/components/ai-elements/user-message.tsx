@@ -1,6 +1,6 @@
 "use client";
 
-import { memo } from "react";
+import { memo, useCallback } from "react";
 import { cn } from "@/lib/utils";
 import { Message, MessageContent } from "@/components/ai-elements/message";
 import { Response } from "@/components/ai-elements/response";
@@ -22,7 +22,7 @@ export const UserMessage = memo(function UserMessage({
   message,
   onEdit,
 }: UserMessageProps) {
-  const handleCopy = async () => {
+  const handleCopy = useCallback(async () => {
     try {
       await navigator.clipboard.writeText(message.content);
       toast.success("Copied to clipboard");
@@ -30,13 +30,13 @@ export const UserMessage = memo(function UserMessage({
       console.error("Copy failed", err);
       toast.error("Copy failed");
     }
-  };
+  }, [message.content]);
 
-  const handleEdit = () => {
+  const handleEdit = useCallback(() => {
     if (onEdit) {
       onEdit(message._id, message.content);
     }
-  };
+  }, [onEdit, message._id, message.content]);
 
   return (
     <Message
