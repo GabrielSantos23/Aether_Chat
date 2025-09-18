@@ -1,7 +1,7 @@
 "use client";
 import Link from "next/link";
 import { ModeToggle } from "./mode-toggle";
-import { SidebarTrigger } from "./ui/sidebar";
+import { SidebarTrigger, useSidebar } from "./ui/sidebar";
 import { ThemeSelector } from "./theme-selector";
 import ModelSelector from "./model-selector";
 import MessageHistory from "./ai-elements/message-history";
@@ -9,6 +9,7 @@ import { UserButton } from "./user-button";
 import { cn } from "@/lib/utils";
 import type { Id } from "@aether-ai-2/backend/convex/_generated/dataModel";
 import { useState } from "react";
+import { useTheme } from "@/hooks/use-theme";
 
 interface HeaderProps {
   chatId?: string;
@@ -18,16 +19,20 @@ interface HeaderProps {
 
 export default function Header({ chatId, threadId, toolSidebar }: HeaderProps) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const { sidebarVariant } = useTheme();
+  const { open: isSidebarOpen } = useSidebar();
 
   return (
     <header
       className={cn(
-        "bg-background/50 border-b backdrop-blur-md absolute top-0 left-0 right-0 z-10 flex justify-between items-center px-2",
-        !toolSidebar && "2xl:border-b  bg-background/40 backdrop-blur-md"
+        "bg-background/50 absolute top-0 left-0 right-0 z-10 flex justify-between items-center px-2",
+        !toolSidebar && "2xl:",
+        sidebarVariant === "sidebar" &&
+          "border-b  bg-background/40 backdrop-blur-md"
       )}
     >
       <div className="flex flex-row items-center gap-2">
-        {!toolSidebar && <SidebarTrigger className="p-3 sm:p-5" />}
+        {!isSidebarOpen && <SidebarTrigger className="p-3 sm:p-5" />}
         <div className="hidden sm:block">
           <ModelSelector />
         </div>

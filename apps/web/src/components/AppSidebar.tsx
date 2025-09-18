@@ -36,6 +36,7 @@ import { Label } from "./ui/label";
 import { Input } from "./ui/input";
 import AetheriaIcon from "./icons/Aether";
 import { useTheme } from "@/hooks/use-theme";
+import { cn } from "@/lib/utils";
 
 type Chat = {
   _id: Id<"chats">;
@@ -76,8 +77,12 @@ export default function AppSidebar() {
 }
 
 function AppSidebarHeader() {
+  const { sidebarVariant, isLoading } = useTheme();
+
   return (
-    <SidebarHeader className="p-3 py-4 border-b ">
+    <SidebarHeader
+      className={cn("p-3 py-4  ", sidebarVariant === "sidebar" && "border-b")}
+    >
       <div className="flex items-center justify-between">
         <Button variant="ghost" size="icon" asChild>
           <Link to="/">

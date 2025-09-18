@@ -104,8 +104,11 @@ export default function ChatInterface({
       type: string;
       size: number;
       url: string;
+      isUploading?: boolean;
+      uploadProgress?: number;
     }>
   >([]);
+  const [isUploading, setIsUploading] = useState(false);
 
   const [currentChatId, setCurrentChatId] = useState<Id<"chats"> | null>(
     chatId || null
@@ -256,25 +259,52 @@ export default function ChatInterface({
 
       const validFiles = fileArray.filter((file) => {
         const isImage = file.type.startsWith("image/");
-        const isPdf = file.type === "application/pdf";
-        return isImage || isPdf;
+        return isImage;
       });
 
       if (validFiles.length !== fileArray.length) {
-        toast.warning("Only image and PDF files are supported");
+        toast.warning(
+          "Only image files are currently supported. PDF and text file support is coming soon!"
+        );
       }
 
       if (validFiles.length === 0) return;
+
+      setIsUploading(true);
 
       const previewFiles = validFiles.map((file) => ({
         name: file.name,
         type: file.type,
         size: file.size,
         url: URL.createObjectURL(file),
+        isUploading: true,
+        uploadProgress: 0,
       }));
 
       setAttachedFiles((prev) => [...prev, ...previewFiles]);
 
+      // Simulate upload progress
+      for (let i = 0; i <= 100; i += 10) {
+        await new Promise((resolve) => setTimeout(resolve, 100));
+        setAttachedFiles((prev) =>
+          prev.map((file, index) =>
+            index >= prev.length - previewFiles.length
+              ? { ...file, uploadProgress: i }
+              : file
+          )
+        );
+      }
+
+      // Mark upload as complete
+      setAttachedFiles((prev) =>
+        prev.map((file, index) =>
+          index >= prev.length - previewFiles.length
+            ? { ...file, isUploading: false, uploadProgress: 100 }
+            : file
+        )
+      );
+
+      setIsUploading(false);
       toast.success(`${previewFiles.length} file(s) uploaded successfully`);
 
       if (fileInputRef.current) {
@@ -285,12 +315,21 @@ export default function ChatInterface({
   );
 
   const handleUploadThingComplete = useCallback((uploadedFiles: any[]) => {
-    const files = uploadedFiles.map((file) => ({
-      name: file.name,
-      type: file.type,
-      size: file.size,
-      url: file.url,
-    }));
+    const files = uploadedFiles
+      .filter((file) => file.type.startsWith("image/"))
+      .map((file) => ({
+        name: file.name,
+        type: file.type,
+        size: file.size,
+        url: file.url,
+        isUploading: false,
+        uploadProgress: 100,
+      }));
+
+    if (files.length === 0) {
+      toast.warning("Only image files are supported");
+      return;
+    }
 
     setAttachedFiles((prev) => {
       const newFiles = [...prev, ...files];
@@ -608,6 +647,7 @@ export default function ChatInterface({
               remainingResearches={remainingResearches}
               handleFileUpload={handleFileUpload}
               handleUploadThingComplete={handleUploadThingComplete}
+              isUploading={isUploading}
             />
           </div>
         </TooltipProvider>

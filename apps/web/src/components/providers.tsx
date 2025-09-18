@@ -8,7 +8,9 @@ import { useCallback, useMemo } from "react";
 import { SidebarProvider } from "@/contexts/sidebar-context";
 import { AppThemeProvider } from "@/contexts/theme-context";
 
-const convex = new ConvexReactClient(process.env.NEXT_PUBLIC_CONVEX_URL!);
+const convex = new ConvexReactClient(
+  process.env.NEXT_PUBLIC_CONVEX_URL || "https://wandering-emu-336.convex.cloud"
+);
 
 function useAuthFromNextAuth() {
   const { data: session, status } = useSession();

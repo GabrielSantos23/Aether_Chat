@@ -46,25 +46,52 @@ export const sendMessage = action({
     userMessageId: Id<"messages">;
     assistantMessageId: Id<"messages">;
   }> => {
-    const getFileType = (file: { type: string }) => {
+    const getFileType = (file: { type: string; name: string }) => {
       if (file.type.startsWith("image")) {
         return "image";
       }
-      return "file";
+      // For now, only support images. Other file types will be mentioned in text
+      return "unsupported";
     };
+
+    // Separate images from other files
+    const imageFiles = attachments.filter((file) =>
+      file.type.startsWith("image")
+    );
+    const otherFiles = attachments.filter(
+      (file) => !file.type.startsWith("image")
+    );
+
+    // Build content array
+    const content: any[] = [
+      {
+        type: "text",
+        text: message,
+      },
+    ];
+
+    // Add image attachments
+    if (imageFiles.length > 0) {
+      content.push(
+        ...imageFiles.map((file) => ({
+          type: "image" as const,
+          image: new URL(file.url),
+        }))
+      );
+    }
+
+    // Add text about other files
+    if (otherFiles.length > 0) {
+      const fileNames = otherFiles.map((f) => f.name).join(", ");
+      content.push({
+        type: "text",
+        text: `\n\n[Note: I can see you've uploaded these files: ${fileNames}. However, I can only process image files directly. For PDFs and other document types, you may need to copy and paste the text content for me to analyze it.]`,
+      });
+    }
 
     chatMessages.push({
       role: "user" as const,
-      content: [
-        {
-          type: "text",
-          text: message,
-        },
-        ...attachments.map((file) => ({
-          type: getFileType(file),
-          [getFileType(file)]: new URL(file.url),
-        })),
-      ],
+      content,
     });
 
     await generateAIResponse(

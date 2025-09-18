@@ -76,7 +76,7 @@ export const models: Model[] = [
       "GPT-5 mini is a cost optimized model that excels at reasoning/chat tasks. It offers an optimal balance between speed, cost, and capability.",
     capabilities: ["tools", "reasoning", "vision"],
     icon: "openai",
-    access: "account_required",
+    access: "premium_required",
     pinned: true,
   },
   {
@@ -165,7 +165,7 @@ export const models: Model[] = [
       "GPT-4o is OpenAI's flagship multimodal model with strong performance across text, vision, and reasoning tasks.",
     capabilities: ["tools", "reasoning", "vision", "documents"],
     icon: "openai",
-    access: "account_required",
+    access: "premium_required",
     pinned: false,
   },
   {
@@ -176,7 +176,7 @@ export const models: Model[] = [
       "A smaller, faster version of GPT-4o optimized for efficiency while maintaining strong capabilities.",
     capabilities: ["tools", "reasoning", "vision", "documents"],
     icon: "openai",
-    access: "public",
+    access: "premium_required",
     pinned: false,
   },
   {

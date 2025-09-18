@@ -1,25 +1,44 @@
 {
-	"$schema": "https://turbo.build/schema.json",
-	"ui": "tui",
-	"tasks": {
-		"build": {
-			"dependsOn": ["^build"],
-			"inputs": ["$TURBO_DEFAULT$", ".env*"],
-			"outputs": ["dist/**"]
-		},
-		"lint": {
-			"dependsOn": ["^lint"]
-		},
-		"check-types": {
-			"dependsOn": ["^check-types"]
-		},
-		"dev": {
-			"cache": false,
-			"persistent": true
-		},
-		"dev:setup": {
-			"cache": false,
-			"persistent": true
-		}
-	}
+  "$schema": "https://turbo.build/schema.json",
+  "ui": "tui",
+  "tasks": {
+    "build": {
+      "dependsOn": ["^build"],
+      "inputs": ["$TURBO_DEFAULT$", ".env*"],
+      "outputs": ["dist/**"],
+      "env": [
+        "NEXT_PUBLIC_CONVEX_URL",
+        "CONVEX_AUTH_PRIVATE_KEY",
+        "CONVEX_AUTH_ADAPTER_SECRET",
+        "AUTH_GITHUB_ID",
+        "AUTH_GITHUB_SECRET",
+        "AUTH_GOOGLE_ID",
+        "AUTH_GOOGLE_SECRET",
+        "EXA_API_KEY",
+        "GEMINI_API_KEY",
+        "GOOGLE_GENERATIVE_AI_API_KEY",
+        "JWKS",
+        "OPENROUTER_API_KEY",
+        "RESEND_API_KEY",
+        "SITE_URL",
+        "TAVILY_API_KEY",
+        "UPLOADTHING_SECRET",
+        "UPLOADTHING_TOKEN"
+      ]
+    },
+    "lint": {
+      "dependsOn": ["^lint"]
+    },
+    "check-types": {
+      "dependsOn": ["^check-types"]
+    },
+    "dev": {
+      "cache": false,
+      "persistent": true
+    },
+    "dev:setup": {
+      "cache": false,
+      "persistent": true
+    }
+  }
 }

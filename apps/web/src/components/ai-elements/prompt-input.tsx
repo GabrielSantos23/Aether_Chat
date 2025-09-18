@@ -341,6 +341,8 @@ export type PromptInputImagePreviewProps = {
   index: number;
   onRemove: (index: number) => void;
   className?: string;
+  isUploading?: boolean;
+  uploadProgress?: number;
 };
 
 export function PromptInputImagePreview({
@@ -348,10 +350,11 @@ export function PromptInputImagePreview({
   index,
   onRemove,
   className,
+  isUploading = false,
+  uploadProgress = 0,
 }: PromptInputImagePreviewProps) {
   const [preview, setPreview] = useState<string | null>(null);
   const isImage = file.type.startsWith("image/");
-  const isPdf = file.type === "application/pdf";
 
   React.useEffect(() => {
     if (isImage) {
@@ -375,11 +378,7 @@ export function PromptInputImagePreview({
           className
         )}
       >
-        {isPdf ? (
-          <FileIcon className="size-4" />
-        ) : (
-          <ImageIcon className="size-4" />
-        )}
+        <ImageIcon className="size-4" />
         <span className="truncate">{file.name}</span>
         <Button
           variant="ghost"
@@ -395,16 +394,27 @@ export function PromptInputImagePreview({
 
   return (
     <div className={cn("relative group", className)}>
-      <img
-        src={preview}
-        alt={file.name}
-        className="w-20 h-20 object-cover rounded-lg border"
-      />
+      <div className="relative w-20 h-20 rounded-lg border overflow-hidden">
+        {isUploading ? (
+          <div className="w-full h-full bg-muted flex items-center justify-center">
+            <div className="text-muted-foreground text-xs font-medium">
+              {Math.round(uploadProgress)}%
+            </div>
+          </div>
+        ) : (
+          <img
+            src={preview}
+            alt={file.name}
+            className="w-full h-full object-cover"
+          />
+        )}
+      </div>
       <Button
         variant="destructive"
         size="icon"
         className="absolute -top-2 -right-2 size-10 opacity-0 group-hover:opacity-100 transition-opacity"
         onClick={() => onRemove(index)}
+        disabled={isUploading}
       >
         <XIcon className="size-10" />
       </Button>
@@ -418,15 +428,17 @@ export type PromptInputFileUploadProps = {
   onFileSelect?: (files: FileList | null) => void;
   onUploadComplete?: (files: any[]) => void;
   onUploadError?: (error: Error) => void;
+  onUploadProgress?: (progress: number) => void;
   className?: string;
 };
 
 export function PromptInputFileUpload({
-  accept = "image/*,application/pdf",
+  accept = "image/*",
   multiple = true,
   onFileSelect,
   onUploadComplete,
   onUploadError,
+  onUploadProgress,
   className,
 }: PromptInputFileUploadProps) {
   const [isUploading, setIsUploading] = useState(false);

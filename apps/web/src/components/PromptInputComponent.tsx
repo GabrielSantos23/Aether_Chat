@@ -60,6 +60,7 @@ interface PromptInputComponentProps {
   remainingResearches: number;
   handleFileUpload: (files: FileList | null) => void;
   handleUploadThingComplete: (uploadedFiles: any[]) => void;
+  isUploading?: boolean;
 }
 
 export const PromptInputComponent: FC<PromptInputComponentProps> = ({
@@ -90,6 +91,7 @@ export const PromptInputComponent: FC<PromptInputComponentProps> = ({
   remainingResearches,
   handleFileUpload,
   handleUploadThingComplete,
+  isUploading = false,
 }) => (
   <div
     className={cn(
@@ -104,20 +106,14 @@ export const PromptInputComponent: FC<PromptInputComponentProps> = ({
             const isImage = file.type.startsWith("image/");
             if (isImage) {
               return (
-                <div key={index} className="relative group">
-                  <img
-                    src={file.url}
-                    alt={file.name}
-                    className="w-20 h-20 object-cover rounded-lg border"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => removeAttachedFile(index)}
-                    className="absolute -top-2 -right-2 size-6 bg-destructive text-destructive-foreground rounded-full opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-xs"
-                  >
-                    ×
-                  </button>
-                </div>
+                <PromptInputImagePreview
+                  key={index}
+                  file={file}
+                  index={index}
+                  onRemove={removeAttachedFile}
+                  isUploading={file.isUploading}
+                  uploadProgress={file.uploadProgress}
+                />
               );
             } else {
               return (
@@ -131,6 +127,7 @@ export const PromptInputComponent: FC<PromptInputComponentProps> = ({
                     type="button"
                     onClick={() => removeAttachedFile(index)}
                     className="text-muted-foreground hover:text-foreground"
+                    disabled={file.isUploading}
                   >
                     ×
                   </button>
@@ -471,7 +468,7 @@ export const PromptInputComponent: FC<PromptInputComponentProps> = ({
                 .otherwise(() => "Attach files")}
             >
               <PromptInputFileUpload
-                accept="image/*,application/pdf"
+                accept="image/*"
                 multiple={true}
                 onFileSelect={handleFileUpload}
                 onUploadComplete={handleUploadThingComplete}
@@ -486,6 +483,7 @@ export const PromptInputComponent: FC<PromptInputComponentProps> = ({
               disabled={
                 !text.trim() ||
                 isLoading ||
+                isUploading ||
                 isUnauthenticated ||
                 (!isPro && (remainingCredits ?? 0) <= 0)
               }

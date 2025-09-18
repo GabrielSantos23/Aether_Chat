@@ -288,16 +288,6 @@ export const sendMessage = action({
         }
       );
 
-      chatMessages.push({
-        role: "user" as const,
-        content: [
-          {
-            type: "text",
-            text: message,
-          },
-        ],
-      });
-
       if ((attachments && attachments.length > 0) || imageGen) {
         return await ctx.runAction(api.chat.node.sendMessage, {
           chatMessages,
@@ -311,6 +301,12 @@ export const sendMessage = action({
           research,
         });
       }
+
+      // Add the user message for non-attachment cases
+      chatMessages.push({
+        role: "user" as const,
+        content: message,
+      });
 
       try {
         await generateAIResponse(
