@@ -13,7 +13,7 @@ import {
 } from "lucide-react";
 import { match, P } from "ts-pattern";
 import type { FC } from "react";
-import { UploadedFile } from "@/lib/types";
+import type { UploadedFile } from "@/lib/types";
 import { Button } from "./ui/button";
 import {
   PromptInput,

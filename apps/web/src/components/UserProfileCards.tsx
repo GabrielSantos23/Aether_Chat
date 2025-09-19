@@ -15,7 +15,7 @@ import { Separator } from "@/components/ui/separator";
 import { useSession } from "next-auth/react";
 import { toast } from "sonner";
 import { X } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Link } from "@tanstack/react-router";
 import z from "zod";
 import { useMutation, useQuery } from "convex/react";
 import { api } from "@aether-ai-2/backend/convex/_generated/api";

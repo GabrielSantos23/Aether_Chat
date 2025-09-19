@@ -14,7 +14,14 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import { ChevronsUpDown, Pin, PinOff, LockIcon, LogInIcon } from "lucide-react";
+import {
+  ChevronsUpDown,
+  Pin,
+  PinOff,
+  LockIcon,
+  LogInIcon,
+  Loader2Icon,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
   models as sharedModels,
@@ -163,7 +170,7 @@ export default function ModelSelector() {
       <div className="w-full max-w-md mx-auto p-4">
         <Button variant="ghost" disabled>
           <div className="flex items-center gap-2 flex-1">
-            <div className="w-4 h-4 rounded bg-gray-200 animate-pulse" />
+            <Loader2Icon className="size-4 animate-spin" />
             <span className="truncate hidden md:block">Loading...</span>
           </div>
           <ChevronsUpDown className="opacity-50" />

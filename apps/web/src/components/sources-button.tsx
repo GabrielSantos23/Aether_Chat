@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { SearchIcon, ExternalLink, Loader2Icon } from "lucide-react";
 import { motion } from "framer-motion";
 import { useSidebar } from "@/contexts/sidebar-context";
-import { ToolCall } from "@/lib/types";
+import type { ToolCall } from "@/lib/types";
 
 interface SourcesButtonProps {
   toolCalls?: ToolCall[];

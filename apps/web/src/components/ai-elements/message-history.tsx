@@ -12,7 +12,7 @@ import { api } from "@aether-ai-2/backend/convex/_generated/api";
 import { useState, useMemo } from "react";
 import { useSession } from "next-auth/react";
 import type { Id } from "@aether-ai-2/backend/convex/_generated/dataModel";
-import { Message as MessageType, ToolCall } from "@/lib/types";
+import type { Message as MessageType, ToolCall } from "@/lib/types";
 
 // Use the shared Message type from lib/types
 type Message = MessageType;

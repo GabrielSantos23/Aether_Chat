@@ -1,4 +1,4 @@
-import { Navigate, Outlet } from "react-router-dom";
+import { Navigate, Outlet } from "@tanstack/react-router";
 import { useQuery } from "convex/react";
 import { useSession } from "next-auth/react";
 import { api } from "@backend/convex/_generated/api";

@@ -15,12 +15,18 @@
 		"dev:setup": "turbo -F @aether-ai-2/backend dev:setup"
 	},
 	"dependencies": {
+		"@tanstack/react-router": "^1.131.48",
+		"@tanstack/react-start": "^1.131.48",
 		"@types/nodemailer": "^7.0.1",
 		"next-auth": "^4.24.11",
-		"nodemailer": "^7.0.6"
+		"nodemailer": "^7.0.6",
+		"vite": "^7.1.6"
 	},
 	"devDependencies": {
-		"turbo": "^2.5.4"
+		"@tailwindcss/vite": "^4.1.13",
+		"tailwindcss": "^4.1.13",
+		"turbo": "^2.5.4",
+		"vite-tsconfig-paths": "^5.1.4"
 	},
 	"packageManager": "bun@1.2.19"
 }

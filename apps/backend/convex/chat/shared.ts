@@ -18,7 +18,7 @@ import { openai } from "@ai-sdk/openai";
 import { api } from "../_generated/api";
 import { Id } from "../_generated/dataModel";
 import { models } from "../../../web/src/lib/models";
-import { getPrompt } from "../../../web/src/components/prompts/base";
+import { getPrompt } from "./prompt";
 
 interface ToolConfig {
   webSearch?: boolean;

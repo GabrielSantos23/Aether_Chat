@@ -23,6 +23,7 @@ import type * as api_keys from "../api_keys.js";
 import type * as chat_actions from "../chat/actions.js";
 import type * as chat_mutations from "../chat/mutations.js";
 import type * as chat_node from "../chat/node.js";
+import type * as chat_prompt from "../chat/prompt.js";
 import type * as chat_queries from "../chat/queries.js";
 import type * as chat_shared from "../chat/shared.js";
 import type * as constants from "../constants.js";
@@ -54,6 +55,7 @@ declare const fullApi: ApiFromModules<{
   "chat/actions": typeof chat_actions;
   "chat/mutations": typeof chat_mutations;
   "chat/node": typeof chat_node;
+  "chat/prompt": typeof chat_prompt;
   "chat/queries": typeof chat_queries;
   "chat/shared": typeof chat_shared;
   constants: typeof constants;

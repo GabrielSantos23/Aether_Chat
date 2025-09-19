@@ -1,5 +1,5 @@
 "use client";
-import Link from "next/link";
+import { Link } from "@tanstack/react-router";
 import { ModeToggle } from "./mode-toggle";
 import { SidebarTrigger, useSidebar } from "./ui/sidebar";
 import { ThemeSelector } from "./theme-selector";

@@ -4,13 +4,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
 import { useSession, signOut } from "next-auth/react";
-import { Link } from "react-router-dom";
+import { Link } from "@tanstack/react-router";
 import { toast } from "sonner";
 import { Globe, MapPin, Clock } from "lucide-react";
 import { UserProfileCards } from "@/components/UserProfileCards";
 import { useMutation, useQuery } from "convex/react";
 import { api } from "@aether-ai-2/backend/convex/_generated/api";
-import { SessionItem } from "@/lib/types";
+import type { SessionItem } from "@/lib/types";
 
 function getUsername(user?: { name?: string; username?: string }) {
   return user?.name || user?.username || "";
@@ -128,7 +128,9 @@ export default function AccountDashboard() {
             label="Username"
             description="What do you want to be called?"
             footerMessage="Please use 32 characters or less."
-            defaultValue={getUsername(session.user)}
+            defaultValue={getUsername(
+              session.user as { name?: string; username?: string }
+            )}
             renderInput={({ onChange, value }) => (
               <Input
                 id="field-input"
@@ -152,10 +154,10 @@ export default function AccountDashboard() {
                 <p>No active sessions found</p>
               </div>
             ) : (
-              sessions.map((sessionItem: SessionItem) => {
+              sessions.map((sessionItem: (typeof sessions)[number]) => {
                 const isCurrentSession = false;
-                const deviceInfo = getDeviceInfo(sessionItem);
-                const deviceIcon = getDeviceIcon(sessionItem);
+                const deviceInfo = getDeviceInfo(sessionItem as SessionItem);
+                const deviceIcon = getDeviceIcon(sessionItem as SessionItem);
 
                 return (
                   <div
@@ -191,7 +193,7 @@ export default function AccountDashboard() {
                           <div className="flex items-center gap-1">
                             <Clock className="size-3" />
                             <span>
-                              {getRelativeTime(sessionItem.createdAt)}
+                              {getRelativeTime(sessionItem.createdAt ?? 0)}
                             </span>
                           </div>
                           {sessionItem.ipAddress && (

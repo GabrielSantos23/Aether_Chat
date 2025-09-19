@@ -1,5 +1,3 @@
-"use client";
-
 import { useEffect, useState } from "react";
 import { getProviders } from "next-auth/react";
 import { LoginForm } from "./login-form";

@@ -1,5 +1,3 @@
-"use client";
-
 import { useState, useCallback, useEffect, useRef, createContext } from "react";
 import { useQuery, useMutation, useAction, useConvexAuth } from "convex/react";
 import { api } from "@backend/convex/_generated/api";
@@ -10,7 +8,7 @@ import { useModel } from "@/contexts/ModelContext";
 import { models } from "@/lib/models";
 import { motion } from "framer-motion";
 import { match, P } from "ts-pattern";
-import { useRouter } from "next/navigation";
+import { useNavigate, useRouter } from "@tanstack/react-router";
 
 import {
   Conversation,
@@ -65,6 +63,7 @@ export default function ChatInterface({
   className,
 }: ChatInterfaceProps) {
   const router = useRouter();
+  const navigate = useNavigate();
   const { data: session, status } = useSession();
   const { isLoading: isConvexLoading, isAuthenticated: isConvexAuthenticated } =
     useConvexAuth();
@@ -173,7 +172,7 @@ export default function ChatInterface({
       currentChatId &&
       chat === null
     ) {
-      router.push("/chat");
+      navigate({ to: "/Chat" });
     }
   }, [chat, currentChatId, isAuthenticated, isSessionLoading, router]);
 
@@ -338,7 +337,7 @@ export default function ChatInterface({
           if (!activeChatId) {
             throw new Error("Failed to create chat");
           }
-          router.push(`/chat/${activeChatId}`);
+          navigate({ to: `/chat/${activeChatId}` });
         }
 
         await sendMessage({
@@ -522,7 +521,7 @@ export default function ChatInterface({
               This chat may have been deleted or you don't have access to it.
             </p>
             <button
-              onClick={() => router.push("/chat")}
+              onClick={() => navigate({ to: "/Chat" })}
               className="px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 mt-4 text-sm"
             >
               Start a new chat

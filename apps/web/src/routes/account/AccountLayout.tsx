@@ -8,7 +8,7 @@ import {
   User,
   ArrowLeft,
 } from "lucide-react";
-import { Outlet, NavLink, useNavigate } from "react-router-dom";
+import { Outlet, Link, useNavigate } from "@tanstack/react-router";
 
 export default function AccountLayout() {
   const navigate = useNavigate();
@@ -66,9 +66,8 @@ export default function AccountLayout() {
                 <ul className="flex gap-4">
                   {accountNavItems.map((item) => (
                     <li key={item.path}>
-                      <NavLink
+                      <Link
                         to={item.path}
-                        end={item.path === "/account"}
                         className={({ isActive }) =>
                           `${
                             isActive ? "bg-card border" : ""
@@ -76,7 +75,7 @@ export default function AccountLayout() {
                         }
                       >
                         {item.icon} {item.label}
-                      </NavLink>
+                      </Link>
                     </li>
                   ))}
                 </ul>

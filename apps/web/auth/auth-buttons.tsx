@@ -1,5 +1,3 @@
-"use client";
-
 import { AuthProviderIcon } from "@/components/icons/provider-icon";
 import { Button } from "@/components/ui/button";
 import { CircularLoader } from "@/components/ui/loader";

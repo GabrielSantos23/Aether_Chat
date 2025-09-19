@@ -1,15 +1,15 @@
 "use client";
 
 import {
-  ComponentProps,
+  type ComponentProps,
   createContext,
-  CSSProperties,
   useCallback,
   useContext,
   useEffect,
   useMemo,
   useState,
 } from "react";
+import type { CSSProperties } from "react";
 import { Slot } from "@radix-ui/react-slot";
 import { cva, type VariantProps } from "class-variance-authority";
 import { PanelLeftIcon } from "lucide-react";

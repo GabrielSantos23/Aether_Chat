@@ -1,4 +1,4 @@
-import Image from "next/image";
+// import Image from "next/image"; // Replaced with regular img tag for TanStack Start
 
 import { cn } from "@/lib/utils";
 import { SiGithub, SiNotion, SiX } from "@icons-pack/react-simple-icons";

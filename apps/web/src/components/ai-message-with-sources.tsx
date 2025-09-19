@@ -1,7 +1,5 @@
-"use client";
-
 import { SourcesButton } from "./sources-button";
-import { ToolCall } from "@/lib/types";
+import type { ToolCall } from "@/lib/types";
 
 interface AIMessageWithSourcesProps {
   content: string;

@@ -6,7 +6,7 @@ import { Separator } from "@/components/ui/separator";
 import { useTheme } from "@/hooks/use-theme";
 import { Mail, Loader2, CheckCircle, Github } from "lucide-react";
 import { signIn, useSession } from "next-auth/react";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { useNavigate, useSearch } from "@tanstack/react-router";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -24,7 +24,7 @@ const LoginPage = () => {
   const { isLoading: themeLoading } = useTheme();
   const { data: session, status } = useSession();
   const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
+  const searchParams = useSearch();
   const [isLoading, setIsLoading] = useState(false);
   const [emailSent, setEmailSent] = useState(false);
   const [error, setError] = useState<string | null>(null);

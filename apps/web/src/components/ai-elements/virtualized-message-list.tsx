@@ -5,7 +5,7 @@ import { useVirtualizer } from "@tanstack/react-virtual";
 import { useRef } from "react";
 import { AIMessage } from "./ai-message";
 import { UserMessage } from "./user-message";
-import { Message as MessageType } from "@/lib/types";
+import type { Message as MessageType } from "@/lib/types";
 
 interface VirtualizedMessageListProps {
   messages: MessageType[];
@@ -22,21 +22,18 @@ export const VirtualizedMessageList = memo(function VirtualizedMessageList({
 }: VirtualizedMessageListProps) {
   const parentRef = useRef<HTMLDivElement>(null);
 
-  // Memoize the virtualizer configuration
   const virtualizer = useVirtualizer({
     count: messages.length,
     getScrollElement: () => parentRef.current,
-    estimateSize: useCallback(() => 200, []), // Estimate 200px per message
-    overscan: 5, // Render 5 extra items outside the visible area
+    estimateSize: useCallback(() => 200, []),
+    overscan: 5,
   });
 
-  // Memoize the message items to prevent unnecessary re-renders
   const messageItems = useMemo(() => {
     return virtualizer.getVirtualItems().map((virtualItem) => {
       const message = messages[virtualItem.index];
       const isUserMessage = message.role === "user";
 
-      // Check if there's a previous user message for regeneration logic
       let hasPreviousUserMessage = false;
       if (!isUserMessage) {
         for (let i = virtualItem.index - 1; i >= 0; i--) {

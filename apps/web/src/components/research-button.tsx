@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Brain, ExternalLink } from "lucide-react";
 import { motion } from "framer-motion";
 import { useSidebar } from "@/contexts/sidebar-context";
-import { ToolCall } from "@/lib/types";
+import type { ToolCall } from "@/lib/types";
 
 interface ResearchButtonProps {
   toolCalls?: ToolCall[];

@@ -1,10 +1,8 @@
-"use client";
-
 import { cn } from "@/lib/utils";
 
 import { VStack } from "@/components/ui/stack";
 import { AuthButtons } from "./auth-buttons";
-import { useSearchParams } from "next/navigation";
+import { useSearch } from "@tanstack/react-router";
 import { Card } from "@/components/ui/card";
 
 interface LoginFormProps {

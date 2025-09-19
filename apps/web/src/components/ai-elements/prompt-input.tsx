@@ -11,7 +11,7 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 import type { ChatStatus } from "ai";
-import { UploadedFile } from "@/lib/types";
+import type { UploadedFile } from "@/lib/types";
 import {
   Loader2Icon,
   SendIcon,

@@ -1,6 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { ArrowLeftIcon, MailIcon, RefreshCwIcon } from "lucide-react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "@tanstack/react-router";
 
 export function MagicLink() {
   const navigate = useNavigate();

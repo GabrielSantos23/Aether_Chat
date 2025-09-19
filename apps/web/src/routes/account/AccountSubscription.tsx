@@ -2,7 +2,7 @@ import { AccountCard } from "@/components/AccountCard";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useSession } from "next-auth/react";
-import { Link } from "react-router-dom";
+import { Link } from "@tanstack/react-router";
 import { useQuery } from "convex/react";
 import { api } from "@aether-ai-2/backend/convex/_generated/api";
 import { Separator } from "@/components/ui/separator";

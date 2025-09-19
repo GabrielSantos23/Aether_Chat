@@ -14,7 +14,7 @@ import {
   Github,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "@tanstack/react-router";
 import { useSession, signOut } from "next-auth/react";
 import { useQuery } from "convex/react";
 import { api } from "@backend/convex/_generated/api";

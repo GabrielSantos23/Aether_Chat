@@ -1,7 +1,7 @@
 "use client";
 import { UploadButton, UploadDropzone, Uploader } from "@uploadthing/react";
 import type { OurFileRouter } from "./uploadthing";
-import { UploadedFile } from "./types";
+import type { UploadedFile } from "./types";
 
 export function FileUploadButton({
   onUploadComplete,
